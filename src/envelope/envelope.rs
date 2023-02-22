@@ -318,15 +318,11 @@ where
     /// # Examples
     ///
     /// ```rust
-    /// use tagid_rs::{CuidGenerator, Entity, Label, MakeLabeling};
-    /// use tagid_rs::envelope::{Envelope, MetaData};
+    /// use tagid::{CuidGenerator, Entity, Label, MakeLabeling};
+    /// use tagid::envelope::{Envelope, MetaData};
     ///
-    /// #[derive(Debug, PartialEq)]
+    /// #[derive(Debug, Label, PartialEq)]
     /// struct Foo(pub i32);
-    /// impl Label for Foo {
-    ///     type Labeler = MakeLabeling<Foo>;
-    ///     fn labeler() -> Self::Labeler { MakeLabeling::new() }
-    /// }
     /// impl Entity for Foo { type IdGen = CuidGenerator; }
     ///
     /// let meta: MetaData<Foo, String> = MetaData::default();
@@ -357,15 +353,11 @@ where
     /// # Examples
     ///
     /// ```rust
-    /// use tagid_rs::{CuidGenerator, Entity, Label, MakeLabeling};
-    /// use tagid_rs::envelope::{Envelope, MetaData};
+    /// use tagid::{CuidGenerator, Entity, Label, MakeLabeling};
+    /// use tagid::envelope::{Envelope, MetaData};
     ///
-    /// #[derive(Debug, PartialEq)]
+    /// #[derive(Debug, Label, PartialEq)]
     /// struct Foo(pub i32);
-    /// impl Label for Foo {
-    ///     type Labeler = MakeLabeling<Foo>;
-    ///     fn labeler() -> Self::Labeler { MakeLabeling::new() }
-    /// }
     /// impl Entity for Foo { type IdGen = CuidGenerator; }
     ///
     /// let meta: MetaData<Foo, String> = MetaData::default();

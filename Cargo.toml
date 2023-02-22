@@ -1,5 +1,5 @@
 [package]
-name = "tagid-rs"
+name = "tagid"
 version = "0.1.0"
 edition = "2021"
 description = """\
@@ -13,8 +13,8 @@ categories = ["Algorithms", "Data structures", "Development tools"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
-#default = ["derive"]
-#derive = ["tagid-derive"]
+default = ["derive"]
+derive = ["tagid-derive"]
 envelope = ["iso8601-timestamp"]
 functional = ["frunk"]
 
@@ -23,6 +23,7 @@ cuid2 = "0"
 uuid = { version = "1", features = ["serde", "v4",] }
 rs-snowflake = "0"
 
+tagid-derive = { path = "tagid-derive", optional = true }
 frunk = { optional = true, version = "0" }
 iso8601-timestamp = { optional = true, version = "0", default-features = true }
 once_cell = "1"
