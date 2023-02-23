@@ -21,10 +21,10 @@ pub use label::Label;
 pub use labeling::{CustomLabeling, Labeling, MakeLabeling, NoLabeling};
 
 #[cfg(feature = "cuid")]
-pub use id::CuidGenerator;
+pub use id::{CuidGenerator, CuidId};
 
 #[cfg(feature = "uuid")]
 pub use id::UuidGenerator;
 
 #[cfg(feature = "snowflake")]
-pub use id::snowflake::{pretty, MachineNode, SnowflakeGenerator};
+pub use id::snowflake::{self, MachineNode, SnowflakeGenerator};
