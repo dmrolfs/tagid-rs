@@ -1,8 +1,17 @@
 mod gen;
+pub use gen::IdGenerator;
+
+#[cfg(feature = "cuid")]
+pub use gen::{CuidGenerator, CuidId};
+
+#[cfg(feature = "uuid")]
+pub use gen::UuidGenerator;
+
+#[cfg(feature = "snowflake")]
 pub mod snowflake;
 
-pub use self::snowflake::{MachineNode, SnowflakeGenerator};
-pub use gen::{CuidGenerator, CuidId, IdGenerator, UuidGenerator};
+#[cfg(feature = "snowflake")]
+pub use self::snowflake::{pretty, MachineNode, SnowflakeGenerator};
 
 use crate::{Label, Labeling};
 use serde::de::DeserializeOwned;
@@ -181,6 +190,19 @@ mod tests {
         assert_impl_all!(Id<std::rc::Rc<u32>, String>: Send, Sync);
     }
 
+    struct TestGenerator;
+    impl IdGenerator for TestGenerator {
+        type IdType = String;
+
+        fn next_id_rep() -> Self::IdType {
+            std::time::SystemTime::UNIX_EPOCH
+                .elapsed()
+                .unwrap()
+                .as_millis()
+                .to_string()
+        }
+    }
+
     struct Bar;
     impl Label for Bar {
         type Labeler = MakeLabeling<Self>;
@@ -203,7 +225,7 @@ mod tests {
     struct Foo;
 
     impl Entity for Foo {
-        type IdGen = CuidGenerator;
+        type IdGen = TestGenerator;
     }
 
     impl Label for Foo {
@@ -216,7 +238,7 @@ mod tests {
 
     #[test]
     fn test_display() {
-        let a: CuidId<Foo> = Foo::next_id();
+        let a: Id<Foo, String> = Foo::next_id();
         assert_eq!(format!("{a}"), format!("MyFooferNut::{}", a.id));
     }
 
@@ -229,28 +251,34 @@ mod tests {
         let a: Id<Foo, u64> = Id::direct(Foo::labeler().label(), id);
         assert_eq!(format!("{a:#}"), a.id.to_string());
 
-        let id = uuid::Uuid::new_v4();
-        let a: Id<Foo, uuid::Uuid> = Id::direct(Foo::labeler().label(), id);
-        assert_eq!(format!("{a:#}"), a.id.to_string());
+        #[cfg(feature = "uuid")]
+        {
+            let id = uuid::Uuid::new_v4();
+            let a: Id<Foo, uuid::Uuid> = Id::direct(Foo::labeler().label(), id);
+            assert_eq!(format!("{a:#}"), a.id.to_string());
+        }
     }
 
     #[test]
     fn test_debug() {
-        let a: CuidId<Foo> = Foo::next_id();
+        let a: Id<Foo, String> = Foo::next_id();
         assert_eq!(format!("{a:?}"), format!("MyFooferNut::{:?}", a.id));
 
         let id = 98734021;
         let a: Id<Foo, u64> = Id::direct(Foo::labeler().label(), id);
         assert_eq!(format!("{a:?}"), format!("MyFooferNut::{:?}", a.id));
 
-        let id = uuid::Uuid::new_v4();
-        let a: Id<Foo, uuid::Uuid> = Id::direct(Foo::labeler().label(), id);
-        assert_eq!(format!("{a:?}"), format!("MyFooferNut::{:?}", a.id));
+        #[cfg(feature = "uuid")]
+        {
+            let id = uuid::Uuid::new_v4();
+            let a: Id<Foo, uuid::Uuid> = Id::direct(Foo::labeler().label(), id);
+            assert_eq!(format!("{a:?}"), format!("MyFooferNut::{:?}", a.id));
+        }
     }
 
     #[test]
     fn test_alternate_debug() {
-        let a: CuidId<Foo> = Foo::next_id();
+        let a: Id<Foo, String> = Foo::next_id();
         assert_eq!(
             format!("{a:#?}"),
             format!(
@@ -266,12 +294,15 @@ mod tests {
             format!("Id {{\n    label: \"{}\",\n    id: {},\n}}", a.label, a.id,)
         );
 
-        let id = uuid::Uuid::new_v4();
-        let a: Id<Foo, uuid::Uuid> = Id::direct(Foo::labeler().label(), id);
-        assert_eq!(
-            format!("{a:#?}"),
-            format!("Id {{\n    label: \"{}\",\n    id: {},\n}}", a.label, a.id,)
-        );
+        #[cfg(feature = "uuid")]
+        {
+            let id = uuid::Uuid::new_v4();
+            let a: Id<Foo, uuid::Uuid> = Id::direct(Foo::labeler().label(), id);
+            assert_eq!(
+                format!("{a:#?}"),
+                format!("Id {{\n    label: \"{}\",\n    id: {},\n}}", a.label, a.id,)
+            );
+        }
     }
 
     #[test]
@@ -293,7 +324,7 @@ mod tests {
     fn test_id_serde_tokens() {
         let labeler = <Foo as Label>::labeler();
         let cuid = "ig6wv6nezj0jg51lg53dztqy".to_string();
-        let id = CuidId::<Foo>::direct(labeler.label(), cuid);
+        let id = Id::<Foo, String>::direct(labeler.label(), cuid);
         assert_tokens(&id, &vec![Token::Str("ig6wv6nezj0jg51lg53dztqy")]);
 
         let id = Id::<Foo, u64>::direct(labeler.label(), 17);
@@ -305,9 +336,9 @@ mod tests {
         let labeler = <Foo as Label>::labeler();
 
         let cuid = "ig6wv6nezj0jg51lg53dztqy".to_string();
-        let id = CuidId::<Foo>::direct(labeler.label(), cuid);
+        let id = Id::<Foo, String>::direct(labeler.label(), cuid);
         let json = assert_ok!(serde_json::to_string(&id));
-        let actual: CuidId<Foo> = assert_ok!(serde_json::from_str(&json));
+        let actual: Id<Foo, String> = assert_ok!(serde_json::from_str(&json));
         assert_eq!(actual, id);
 
         let id = Id::<Foo, u64>::direct(labeler.label(), 17);
@@ -315,10 +346,13 @@ mod tests {
         let actual: Id<Foo, u64> = assert_ok!(serde_json::from_str(&json));
         assert_eq!(actual, id);
 
-        let uuid = uuid::Uuid::new_v4();
-        let id = Id::<Foo, uuid::Uuid>::direct(labeler.label(), uuid.clone());
-        let json = assert_ok!(serde_json::to_string(&id));
-        let actual: Id<Foo, uuid::Uuid> = assert_ok!(serde_json::from_str(&json));
-        assert_eq!(actual, id);
+        #[cfg(feature = "uuid")]
+        {
+            let uuid = uuid::Uuid::new_v4();
+            let id = Id::<Foo, uuid::Uuid>::direct(labeler.label(), uuid.clone());
+            let json = assert_ok!(serde_json::to_string(&id));
+            let actual: Id<Foo, uuid::Uuid> = assert_ok!(serde_json::from_str(&json));
+            assert_eq!(actual, id);
+        }
     }
 }

@@ -10,7 +10,7 @@ use iso8601_timestamp::Timestamp;
 
 /// Type has correlation identifier.
 pub trait Correlation {
-    type Correlated: Sized + Sync;
+    type Correlated: Sized;
     type IdType;
 
     fn correlation(&self) -> &Id<Self::Correlated, Self::IdType>;

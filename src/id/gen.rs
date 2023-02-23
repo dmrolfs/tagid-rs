@@ -1,29 +1,44 @@
-use super::Id;
-
 pub trait IdGenerator {
     type IdType;
     fn next_id_rep() -> Self::IdType;
 }
 
-#[allow(dead_code)]
-pub type CuidId<T> = Id<T, String>;
+#[cfg(feature = "cuid")]
+pub use self::cuid::{CuidGenerator, CuidId};
 
-pub struct CuidGenerator;
+#[cfg(feature = "uuid")]
+pub use self::uuid::UuidGenerator;
 
-impl IdGenerator for CuidGenerator {
-    type IdType = String;
+#[cfg(feature = "cuid")]
+mod cuid {
+    use super::*;
+    use crate::Id;
 
-    fn next_id_rep() -> Self::IdType {
-        cuid2::create_id()
+    #[allow(dead_code)]
+    pub type CuidId<T> = Id<T, String>;
+
+    pub struct CuidGenerator;
+
+    impl IdGenerator for CuidGenerator {
+        type IdType = String;
+
+        fn next_id_rep() -> Self::IdType {
+            ::cuid2::create_id()
+        }
     }
 }
 
-pub struct UuidGenerator;
+#[cfg(feature = "uuid")]
+mod uuid {
+    use super::*;
 
-impl IdGenerator for UuidGenerator {
-    type IdType = uuid::Uuid;
+    pub struct UuidGenerator;
 
-    fn next_id_rep() -> Self::IdType {
-        uuid::Uuid::new_v4()
+    impl IdGenerator for UuidGenerator {
+        type IdType = ::uuid::Uuid;
+
+        fn next_id_rep() -> Self::IdType {
+            ::uuid::Uuid::new_v4()
+        }
     }
 }

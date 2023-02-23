@@ -1,7 +1,6 @@
 use crate::envelope::{Correlation, ReceivedAt};
 use crate::id::IdGenerator;
 use crate::{Entity, Id, Label, Labeling};
-use frunk::{Monoid, Semigroup};
 use iso8601_timestamp::Timestamp;
 use pretty_type_name::pretty_type_name;
 use serde::{de, Deserialize, Deserializer, Serialize};
@@ -11,6 +10,9 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::str::FromStr;
+
+#[cfg(feature = "functional")]
+use frunk::{Monoid, Semigroup};
 
 pub const CORRELATION_ID_KEY: &str = "correlation_id";
 pub const RECV_TIMESTAMP_KEY: &str = "recv_timestamp";
@@ -81,7 +83,6 @@ where
 
 impl<T, ID> fmt::Display for MetaData<T, ID>
 where
-    // T: Label + ?Sized,
     ID: fmt::Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -103,10 +104,7 @@ where
     }
 }
 
-impl<T, ID> MetaData<T, ID>
-// where
-//     T: Label + ?Sized,
-{
+impl<T, ID> MetaData<T, ID> {
     pub fn from_parts(
         correlation_id: Id<T, ID>,
         recv_timestamp: Timestamp,
@@ -146,11 +144,7 @@ where
     }
 }
 
-impl<T, ID> Correlation for MetaData<T, ID>
-where
-    T: Sync,
-    // T: Label + ?Sized + Sync,
-{
+impl<T, ID> Correlation for MetaData<T, ID> {
     type Correlated = T;
     type IdType = ID;
 
@@ -159,10 +153,7 @@ where
     }
 }
 
-impl<T, ID> ReceivedAt for MetaData<T, ID>
-// where
-//     T: Label + ?Sized,
-{
+impl<T, ID> ReceivedAt for MetaData<T, ID> {
     fn recv_timestamp(&self) -> Timestamp {
         self.recv_timestamp
     }
@@ -170,7 +161,6 @@ impl<T, ID> ReceivedAt for MetaData<T, ID>
 
 impl<T, ID> Clone for MetaData<T, ID>
 where
-    // T: Label + ?Sized,
     ID: Clone,
 {
     fn clone(&self) -> Self {
@@ -184,7 +174,6 @@ where
 
 impl<T, ID> PartialEq for MetaData<T, ID>
 where
-    // T: Label + ?Sized,
     ID: PartialEq,
 {
     fn eq(&self, other: &Self) -> bool {
@@ -192,15 +181,10 @@ where
     }
 }
 
-impl<T, ID> Eq for MetaData<T, ID> where
-    // T: Label + ?Sized,
-    ID: Eq,
-{
-}
+impl<T, ID> Eq for MetaData<T, ID> where ID: Eq {}
 
 impl<T, ID> PartialOrd for MetaData<T, ID>
 where
-    // T: Label + ?Sized,
     ID: PartialOrd,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -210,7 +194,6 @@ where
 
 impl<T, ID> Ord for MetaData<T, ID>
 where
-    // T: Label + ?Sized,
     ID: Ord,
 {
     fn cmp(&self, other: &Self) -> Ordering {
@@ -220,7 +203,6 @@ where
 
 impl<T, ID> std::hash::Hash for MetaData<T, ID>
 where
-    // T: Label + ?Sized,
     ID: std::hash::Hash,
 {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -230,7 +212,6 @@ where
 
 impl<T, ID> std::ops::Add for MetaData<T, ID>
 where
-    // T: Label + ?Sized,
     ID: PartialOrd,
 {
     type Output = Self;
@@ -260,7 +241,6 @@ impl<E> Semigroup for MetaData<E, <<E as Entity>::IdGen as IdGenerator>::IdType>
 where
     E: Entity,
     <<E as Entity>::IdGen as IdGenerator>::IdType: PartialOrd + Clone,
-    // E: Entity + Label,
 {
     fn combine(&self, other: &Self) -> Self {
         if self < other {
@@ -274,7 +254,6 @@ where
 impl<T, ID> From<MetaData<T, ID>> for HashMap<String, String>
 where
     ID: fmt::Display,
-    //     T: Label + ?Sized,
 {
     fn from(meta: MetaData<T, ID>) -> Self {
         let mut core = Self::with_capacity(2);
@@ -293,14 +272,6 @@ where
         result
     }
 }
-
-// impl<T, ID> Serialize for MetaData<T, ID> {
-//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-//     where S: Serializer,
-//     {
-//         todo!()
-//     }
-// }
 
 const META_CORRELATION_ID: &str = "correlation_id";
 const META_RECV_TIMESTAMP: &str = "recv_timestamp";
@@ -451,7 +422,7 @@ where
 mod tests {
     use super::*;
     use crate::envelope::Envelope;
-    use crate::{CuidGenerator, Entity, Label, Labeling, MakeLabeling};
+    use crate::{Entity, Label, Labeling, MakeLabeling};
     use once_cell::sync::Lazy;
     use pretty_assertions::assert_eq;
     use serde_test::Configure;
@@ -464,11 +435,24 @@ mod tests {
         MetaData::default().with_recv_timestamp(ts)
     });
 
+    struct TestGenerator;
+    impl IdGenerator for TestGenerator {
+        type IdType = String;
+
+        fn next_id_rep() -> Self::IdType {
+            std::time::SystemTime::UNIX_EPOCH
+                .elapsed()
+                .unwrap()
+                .as_millis()
+                .to_string()
+        }
+    }
+
     #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
     struct TestData(i32);
 
     impl Entity for TestData {
-        type IdGen = CuidGenerator;
+        type IdGen = TestGenerator;
     }
 
     impl Label for TestData {

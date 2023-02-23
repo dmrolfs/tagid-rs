@@ -125,7 +125,7 @@ where
 
     pub fn map<F, U>(self, f: F) -> Envelope<U, ID>
     where
-        U: Label + Send,
+        U: Label,
         F: FnOnce(T) -> U,
     {
         let metadata = self.metadata.clone().relabel();
@@ -137,7 +137,7 @@ where
 
     pub fn flat_map<F, U>(self, f: F) -> Envelope<U, ID>
     where
-        U: Label + Send,
+        U: Label,
         F: FnOnce(Self) -> U,
     {
         let metadata = self.metadata.clone().relabel();
@@ -146,7 +146,13 @@ where
             content: f(self),
         }
     }
+}
 
+impl<T, ID> Envelope<T, ID>
+where
+    T: Label + Send,
+    ID: Clone + Send,
+{
     pub async fn and_then<Op, Fut, U>(self, f: Op) -> Envelope<U, ID>
     where
         U: Label + Send,
@@ -173,10 +179,7 @@ where
     }
 }
 
-impl<T, ID> ReceivedAt for Envelope<T, ID>
-// where
-//     T: Label,
-{
+impl<T, ID> ReceivedAt for Envelope<T, ID> {
     fn recv_timestamp(&self) -> Timestamp {
         self.metadata.recv_timestamp()
     }
@@ -195,7 +198,6 @@ where
 
 impl<T, ID> std::ops::Add for Envelope<T, ID>
 where
-    // T: std::ops::Add<Output = T> + Label + Send,
     T: std::ops::Add<Output = T>,
     ID: PartialOrd,
 {
@@ -209,7 +211,6 @@ where
 #[cfg(feature = "functional")]
 impl<E> Monoid for Envelope<E, <<E as Entity>::IdGen as IdGenerator>::IdType>
 where
-    // E: Entity + Label + Monoid + Send,
     E: Entity + Monoid,
     <<E as Entity>::IdGen as IdGenerator>::IdType: PartialOrd + Clone,
 {
@@ -226,7 +227,6 @@ impl<E> Semigroup for Envelope<E, <<E as Entity>::IdGen as IdGenerator>::IdType>
 where
     E: Entity + Semigroup,
     <<E as Entity>::IdGen as IdGenerator>::IdType: PartialOrd + Clone,
-    // E: Entity + Label + Semigroup + Send,
 {
     fn combine(&self, other: &Self) -> Self {
         Self::from_parts(
@@ -252,10 +252,7 @@ where
     }
 }
 
-impl<T, ID> std::ops::Deref for Envelope<T, ID>
-// where
-//     T: Label,
-{
+impl<T, ID> std::ops::Deref for Envelope<T, ID> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -263,28 +260,19 @@ impl<T, ID> std::ops::Deref for Envelope<T, ID>
     }
 }
 
-impl<T, ID> std::ops::DerefMut for Envelope<T, ID>
-// where
-//     T: Label,
-{
+impl<T, ID> std::ops::DerefMut for Envelope<T, ID> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.content
     }
 }
 
-impl<T, ID> AsRef<T> for Envelope<T, ID>
-// where
-//     T: Label,
-{
+impl<T, ID> AsRef<T> for Envelope<T, ID> {
     fn as_ref(&self) -> &T {
         &self.content
     }
 }
 
-impl<T, ID> AsMut<T> for Envelope<T, ID>
-// where
-//     T: Label,
-{
+impl<T, ID> AsMut<T> for Envelope<T, ID> {
     fn as_mut(&mut self) -> &mut T {
         &mut self.content
     }
@@ -520,9 +508,4 @@ where
 
         deserializer.deserialize_struct("Envelope", &FIELDS, EnvelopeVisitor::<T, ID>::new())
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
 }
