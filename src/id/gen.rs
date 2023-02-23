@@ -5,6 +5,7 @@ pub trait IdGenerator {
     fn next_id_rep() -> Self::IdType;
 }
 
+#[allow(dead_code)]
 pub type CuidId<T> = Id<T, String>;
 
 pub struct CuidGenerator;

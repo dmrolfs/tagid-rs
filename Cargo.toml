@@ -26,12 +26,14 @@ rs-snowflake = "0"
 tagid-derive = { path = "tagid-derive", optional = true }
 frunk = { optional = true, version = "0" }
 iso8601-timestamp = { optional = true, version = "0", default-features = true }
+itertools = "0"
 once_cell = "1"
 pretty-type-name = "1"
 serde = { version = "1", features = ["derive"] }
 smol_str = "0"
 strum = "0"
 strum_macros = "0"
+tailcall = "0"
 thiserror = "1"
 validator = { version = "0", features = ["derive"] }
 
