@@ -2,7 +2,7 @@ mod codec;
 mod damm;
 mod prettifier;
 
-pub use codec::{Alphabet, AlphabetCodec, Codec};
+pub use codec::{Alphabet, AlphabetCodec, Codec, BASE_23};
 pub use prettifier::{ConversionError, IdPrettifier};
 
 use crate::id::IdGenerator;
@@ -41,6 +41,12 @@ impl fmt::Debug for PrettySnowflakeId {
 impl fmt::Display for PrettySnowflakeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl AsRef<str> for PrettySnowflakeId {
+    fn as_ref(&self) -> &str {
+        self.0.as_str()
     }
 }
 

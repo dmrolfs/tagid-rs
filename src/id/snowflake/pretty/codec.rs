@@ -1,6 +1,8 @@
 use once_cell::sync::Lazy;
 use tailcall::tailcall;
 
+pub static BASE_23: Lazy<Alphabet> = Lazy::new(|| Alphabet::new("ABCDEFGHJKLMNPQRSTUVXYZ"));
+
 pub trait Codec {
     fn encode(&self, number: i64) -> String;
     fn decode(&self, rep: &str) -> i64;
@@ -72,8 +74,6 @@ pub struct Alphabet {
     pub elements: String,
     pub base: usize,
 }
-
-static BASE_23: Lazy<Alphabet> = Lazy::new(|| Alphabet::new("ABCDEFGHJKLMNPQRSTUVXYZ"));
 
 impl Alphabet {
     pub fn new(base: impl Into<String>) -> Self {
