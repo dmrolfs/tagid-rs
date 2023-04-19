@@ -1,5 +1,5 @@
 pub trait IdGenerator {
-    type IdType;
+    type IdType: Send;
     fn next_id_rep() -> Self::IdType;
 }
 
