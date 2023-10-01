@@ -28,3 +28,5 @@ pub use id::UuidGenerator;
 
 #[cfg(feature = "snowflake")]
 pub use id::snowflake::{self, MachineNode, SnowflakeGenerator};
+
+pub const DELIMITER: &str = "::";

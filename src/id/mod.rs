@@ -13,7 +13,7 @@ pub mod snowflake;
 #[cfg(feature = "snowflake")]
 pub use self::snowflake::{pretty, MachineNode, SnowflakeGenerator};
 
-use crate::{Label, Labeling};
+use crate::{Label, Labeling, DELIMITER};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use smol_str::SmolStr;
@@ -114,7 +114,7 @@ impl<T: ?Sized, ID: fmt::Debug> fmt::Debug for Id<T, ID> {
         } else if self.label.is_empty() {
             write!(f, "{:?}", self.id)
         } else {
-            write!(f, "{}::{:?}", self.label, self.id)
+            write!(f, "{}{DELIMITER}{:?}", self.label, self.id)
         }
     }
 }
@@ -124,7 +124,7 @@ impl<T: ?Sized, ID: fmt::Display> fmt::Display for Id<T, ID> {
         if f.alternate() || self.label.is_empty() {
             write!(f, "{}", self.id)
         } else {
-            write!(f, "{}::{}", self.label, self.id)
+            write!(f, "{}{DELIMITER}{}", self.label, self.id)
         }
     }
 }

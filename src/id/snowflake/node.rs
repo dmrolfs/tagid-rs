@@ -1,3 +1,4 @@
+use crate::DELIMITER;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt;
@@ -22,7 +23,7 @@ pub struct MachineNode {
 
 impl fmt::Display for MachineNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({}::{})", self.machine_id, self.node_id)
+        write!(f, "({}{DELIMITER}{})", self.machine_id, self.node_id)
     }
 }
 
