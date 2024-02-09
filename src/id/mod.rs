@@ -175,6 +175,18 @@ impl<'de, T: ?Sized + Label, ID: DeserializeOwned> Deserialize<'de> for Id<T, ID
     }
 }
 
+#[cfg(feature = "disintegrate")]
+use disintegrate::{IdentifierType, IdentifierValue, IntoIdentifierValue};
+
+#[cfg(feature = "disintegrate")]
+impl<T, ID: fmt::Display> IntoIdentifierValue for Id<T, ID> {
+    const TYPE: IdentifierType = IdentifierType::String;
+
+    fn into_identifier_value(self) -> IdentifierValue {
+        IdentifierValue::String(self.id.to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

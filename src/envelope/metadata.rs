@@ -8,7 +8,6 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
-use std::ops::Deref;
 use std::str::FromStr;
 
 #[cfg(feature = "functional")]
@@ -35,13 +34,13 @@ impl IntoMetaData for HashMap<String, String> {
         G::IdType: FromStr,
     {
         let id_rep = self
-            .remove(CORRELATION_ID_KEY.deref())
+            .remove(CORRELATION_ID_KEY)
             .and_then(|rep| G::IdType::from_str(&rep).ok())
             .unwrap_or_else(|| G::next_id_rep());
         let correlation_id = Id::direct(<() as Label>::labeler().label(), id_rep);
 
         let recv_timestamp = self
-            .remove(RECV_TIMESTAMP_KEY.deref())
+            .remove(RECV_TIMESTAMP_KEY)
             .map_or_else(Timestamp::now_utc, |ts| {
                 Timestamp::parse(ts.as_str()).unwrap_or_else(Timestamp::now_utc)
             });

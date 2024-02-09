@@ -1,6 +1,6 @@
 [package]
 name = "tagid"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = """\
 Defines a newtype tagging for CUID2 ids.
@@ -8,8 +8,8 @@ Defines a newtype tagging for CUID2 ids.
 repository = "https://github.com/dmrolfs/tagid-rs"
 readme = "README.md"
 license = "MIT"
-keywords = ["id", "cuid2", "cuid", "distributed", "snowflake", "uuid"]
-categories = ["Algorithms", "Data structures", "Development tools"]
+keywords = ["id", "cuid", "distributed", "snowflake", "uuid"]
+categories = ["algorithms", "data-structures", "development-tools"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
@@ -26,6 +26,7 @@ uuid = { optional = true, version = "1", features = ["serde", "v4",] }
 rs-snowflake = { optional = true, version = "0" }
 
 tagid-derive = { path = "tagid-derive", optional = true }
+disintegrate = { version = "0", optional = true }
 frunk = { optional = true, version = "0" }
 iso8601-timestamp = { optional = true, version = "0", default-features = true }
 itertools = "0"
