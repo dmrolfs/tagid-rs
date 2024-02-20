@@ -175,6 +175,20 @@ impl<'de, T: ?Sized + Label, ID: DeserializeOwned> Deserialize<'de> for Id<T, ID
     }
 }
 
+#[cfg(feature = "sqlx")]
+impl<'q, T, ID, DB> sqlx::Encode<'q, DB> for Id<T, ID>
+where
+    ID: sqlx::Encode,
+    DB: sqlx::Database,
+{
+    fn encode_by_ref(
+        &self,
+        buf: &mut <DB as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
+    ) -> sqlx::encode::IsNull {
+        <ID as Encode<DB>>::encode_by_ref(&self.id, buf)
+    }
+}
+
 #[cfg(feature = "disintegrate")]
 use disintegrate::{IdentifierType, IdentifierValue, IntoIdentifierValue};
 
