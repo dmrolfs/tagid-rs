@@ -189,6 +189,17 @@ where
     }
 }
 
+#[cfg(feature = "sqlx")]
+impl<T, ID, DB> sqlx::Type<DB> for Id<T, ID>
+where
+    ID: sqlx::Type<DB>,
+    DB: sqlx::Database,
+{
+    fn type_info() -> DB::TypeInfo {
+        <ID as sqlx::Type<DB>>::type_info()
+    }
+}
+
 #[cfg(feature = "disintegrate")]
 use disintegrate::{IdentifierType, IdentifierValue, IntoIdentifierValue};
 
