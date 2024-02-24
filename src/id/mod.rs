@@ -176,6 +176,21 @@ impl<'de, T: ?Sized + Label, ID: DeserializeOwned> Deserialize<'de> for Id<T, ID
 }
 
 #[cfg(feature = "sqlx")]
+impl<'q, T, ID, DB> sqlx::Decode<'q, DB> for Id<T, ID>
+where
+    T: Label,
+    ID: sqlx::Decode<'q, DB>,
+    DB: sqlx::Database,
+{
+    fn decode(
+        value: <DB as sqlx::database::HasValueRef<'q>>::ValueRef,
+    ) -> Result<Self, sqlx::error::BoxDynError> {
+        let value = <ID as sqlx::Decode<DB>>::decode(value)?;
+        Ok(Self::for_labeled(value))
+    }
+}
+
+#[cfg(feature = "sqlx")]
 impl<'q, T, ID, DB> sqlx::Encode<'q, DB> for Id<T, ID>
 where
     ID: sqlx::Encode<'q, DB>,
