@@ -49,7 +49,7 @@ impl Codec for AlphabetCodec {
             .fold(ResultWithIndex::default(), |acc, c| {
                 let encoded_part = self.0.index_of(c) as i64;
                 let base_placement = (self.0.base as i64).pow(acc.pos as u32);
-                let acc_inc = encoded_part + base_placement;
+                let acc_inc = encoded_part * base_placement;
                 let new_acc = acc.result + acc_inc;
                 acc.increment_w_result(new_acc)
             })
