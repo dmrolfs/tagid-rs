@@ -13,12 +13,18 @@ use std::str::FromStr;
 #[cfg(feature = "functional")]
 use frunk::{Monoid, Semigroup};
 
+/// This key represents the standard metadata correlation attribute in message envelopes.
 pub const CORRELATION_ID_KEY: &str = "correlation_id";
+
+/// This key represents the standard metadata timestamp attribute used in message envelopes.
 pub const RECV_TIMESTAMP_KEY: &str = "recv_timestamp";
 
+/// Converts an object into `MetaData`, extracting correlation IDs and received timestamps.
 pub trait IntoMetaData {
+    /// The type of entity associated with the metadata.
     type CorrelatedType: Label;
 
+    /// Converts the object into a `MetaData` instance.
     fn into_metadata<G>(self) -> MetaData<Self::CorrelatedType, G::IdType>
     where
         G: IdGenerator,
@@ -51,14 +57,19 @@ impl IntoMetaData for HashMap<String, String> {
     }
 }
 
-/// A set of metdata regarding the envelope contents.
+/// Represents metadata for an envelope, including correlation IDs, timestamps, and custom attributes.
 #[derive(Serialize)]
 pub struct MetaData<T, ID>
 where
     T: ?Sized,
 {
+    /// A unique identifier for correlating messages.
     correlation_id: Id<T, ID>,
+
+    /// The timestamp when the message was received.
     recv_timestamp: Timestamp,
+
+    /// A key-value store for additional metadata.
     custom: HashMap<String, String>,
 }
 
@@ -104,6 +115,7 @@ where
 }
 
 impl<T, ID> MetaData<T, ID> {
+    /// Creates a `MetaData` instance from given correlation ID, timestamp, and optional custom metadata.
     pub fn from_parts(
         correlation_id: Id<T, ID>,
         recv_timestamp: Timestamp,
@@ -299,7 +311,7 @@ where
             {
                 struct FieldVisitor;
 
-                impl<'de> de::Visitor<'de> for FieldVisitor {
+                impl de::Visitor<'_> for FieldVisitor {
                     type Value = Field;
 
                     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

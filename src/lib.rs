@@ -1,5 +1,85 @@
-#![warn(clippy::cargo, clippy::nursery, future_incompatible, rust_2018_idioms)]
-#![allow(clippy::multiple_crate_versions)]
+//! # `tagid` - Typed Unique Identifiers for Rust Entities
+//!
+//! `tagid` provides a robust system for defining and managing typed unique identifiers in Rust.
+//! It supports multiple ID generation strategies (CUID, UUID, Snowflake) and integrates with
+//! `serde`, `sqlx`, and other frameworks for seamless use in databases and serialization.
+//!
+//! ## Features
+//!
+//! - **Typed Identifiers**: Define entity-specific IDs with compile-time safety.
+//! - **Multiple ID Generators**:
+//!   - **CUID** (`cuid` feature) - Compact, collision-resistant IDs.
+//!   - **UUID** (`uuid` feature) - Universally unique identifiers.
+//!   - **Snowflake** (`snowflake` feature) - Time-based, distributed IDs.
+//! - **Entity Labeling**: Labels provide contextual meaning to identifiers.
+//! - **Serialization & Database Support**:
+//!   - [`serde`] integration for JSON and binary serialization (`serde` feature).
+//!   - [`sqlx`] integration for database storage (`sqlx` feature).
+//! - **Custom Labeling**: Define custom label formats for entities.
+//!
+//! ## Installation
+//!
+//! Add `tagid` to your `Cargo.toml`, enabling the desired features:
+//!
+//! ```toml
+//! [dependencies]
+//! tagid = { version = "0.1", features = ["uuid", "sqlx"] }
+//! ```
+//!
+//! ## Usage
+//!
+//! ### Defining an Entity with a Typed ID
+//!
+//! ```rust
+//! use tagid::{Entity, Id, Label};
+//!
+//! #[derive(Label)]
+//! struct User;
+//!
+//! impl Entity for User {
+//!     type IdGen = tagid::UuidGenerator;
+//! }
+//!
+//! let user_id = User::next_id();
+//! println!("User ID: {}", user_id);
+//! ```
+//!
+//! ### Labeling System
+//!
+//! Labels help associate an identifier with an entity, improving clarity in logs and databases:
+//!
+//! ```rust
+//! use tagid::{Label, Labeling};
+//! use tagid::snowflake::pretty::{IdPrettifier, BASE_23};
+//! IdPrettifier::global_initialize(BASE_23.clone());
+//!
+//! #[derive(Label)]
+//! struct Order;
+//!
+//! let order_labeler = Order::labeler();
+//! let order_label = order_labeler.label();
+//! assert_eq!(order_label, "Order");
+//! ```
+//!
+//! ## Features Overview
+//!
+//! | Feature       | Description                                                   |
+//! |--------------|---------------------------------------------------------------|
+//! | `"derive"`   | Enables `#[derive(Label)]` macro for automatic labeling.      |
+//! | `"cuid"`     | Enables the [`CuidGenerator`] for CUID-based IDs.             |
+//! | `"uuid"`     | Enables the [`UuidGenerator`] for UUID-based IDs.             |
+//! | `"snowflake"`| Enables the [`SnowflakeGenerator`] for distributed IDs.       |
+//! | `"serde"`    | Enables serialization support via `serde`.                    |
+//! | `"sqlx"`     | Enables database integration via `sqlx`.                      |
+//! | `"envelope"` | Provides an envelope struct for wrapping IDs with metadata.   |
+//!
+//! ## Contributing
+//!
+//! Contributions are welcome! Open an issue or submit a pull request on [GitHub](https://github.com/your-repo/tagid).
+//!
+//! ## License
+//!
+//! This project is licensed under the MIT License.
 
 #[cfg(feature = "derive")]
 #[allow(unused_imports)]
@@ -29,4 +109,5 @@ pub use id::UuidGenerator;
 #[cfg(feature = "snowflake")]
 pub use id::snowflake::{self, MachineNode, SnowflakeGenerator};
 
+// The default delimiter used to separate entity labels from their ID values.
 pub const DELIMITER: &str = "::";

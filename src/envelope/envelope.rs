@@ -410,7 +410,7 @@ where
             {
                 struct FieldVisitor;
 
-                impl<'de> de::Visitor<'de> for FieldVisitor {
+                impl de::Visitor<'_> for FieldVisitor {
                     type Value = Field;
 
                     fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

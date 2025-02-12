@@ -1,3 +1,59 @@
+//! The `id` module provides a generic mechanism for creating, representing, and managing entity
+//! identifiers (`Id`). It supports multiple ID generation strategies (e.g., CUID, UUID, Snowflake)
+//! and integrates with external libraries such as `serde`, `sqlx`, and `disintegrate`.
+//!
+//! # Overview
+//!
+//! - [`Entity`] Trait: Defines an entity with an associated [`IdGenerator`] for unique ID generation.
+//! - [`Id<T, ID>`] Struct: Represents an ID associated with an entity type `T` and an ID value of type `ID`.
+//! - ID Generation Strategies:
+//!   - **CUID** ([`CuidGenerator`], [`CuidId`]) - Enabled with the `cuid` feature.
+//!   - **UUID** ([`UuidGenerator`]) - Enabled with the `uuid` feature.
+//!   - **Snowflake** ([`SnowflakeGenerator`]) - Enabled with the `snowflake` feature.
+//!
+//! ## Features
+//!
+//! This module integrates with:
+//!
+//! - **Serde** (`serde` feature): Implements [`Serialize`] and [`Deserialize`] for `Id`.
+//! - **SQLx** (`sqlx` feature): Enables database encoding/decoding via [`sqlx::Decode`], [`sqlx::Encode`], and [`sqlx::Type`].
+//! - **Disintegrate** (`disintegrate` feature): Supports [`IntoIdentifierValue`] for identifier-based systems.
+//!
+//! ## Example Usage
+//!
+//! ### Defining an Entity with ID Generation
+//!
+//! ```rust
+//! use tagid::{Entity, Id, Label};
+//!
+//! #[derive(Label)]
+//! struct User;
+//!
+//! impl Entity for User {
+//!     type IdGen = tagid::UuidGenerator;
+//! }
+//!
+//! let user_id = User::next_id();
+//! println!("Generated User ID: {}", user_id);
+//! ```
+//!
+//! # ID Generation Strategies
+//!
+//! The module supports multiple ID generation strategies that can be enabled via Cargo features:
+//!
+//! | Feature       | Generator               | Description                                      |
+//! |--------------|------------------------|--------------------------------------------------|
+//! | `"cuid"`     | [`CuidGenerator`]       | Generates CUID-based IDs.                        |
+//! | `"uuid"`     | [`UuidGenerator`]       | Generates UUID-based IDs.                        |
+//! | `"snowflake"`| [`SnowflakeGenerator`]  | Uses the Snowflake algorithm for distributed ID generation. |
+//!
+//! To enable a specific ID generation method, add the corresponding feature to your `Cargo.toml`:
+//!
+//! ```toml
+//! [dependencies]
+//! tagid = { version = "0.2", features = ["uuid", "snowflake"] }
+//! ```
+
 mod gen;
 pub use gen::IdGenerator;
 
@@ -22,17 +78,54 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
+/// A trait for entities that have a unique identifier.
+///
+/// Implementing this trait allows an entity type to generate new unique IDs
+/// using its associated [`IdGenerator`].
 pub trait Entity: Label {
+    /// The ID generator type used to create unique IDs.
     type IdGen: IdGenerator;
 
+    /// Generates a new unique ID for the entity.
     fn next_id() -> Id<Self, <Self::IdGen as IdGenerator>::IdType> {
         Id::new()
     }
 }
 
+/// A struct representing an identifier for an entity, and supports id labeling in logs and other
+/// output.
+///
+/// `Id<T, ID>` associates an entity type `T` with an ID value of type `ID`.
+///
+/// # Example
+///
+/// ```rust
+/// use tagid::{Id, Entity, Label, MakeLabeling};
+///
+/// struct User;
+///
+/// impl Label for User {
+///     type Labeler = MakeLabeling<Self>;
+///
+///     fn labeler() -> Self::Labeler {
+///         MakeLabeling::default()
+///     }
+/// }
+///
+/// impl Entity for User {
+///     type IdGen = tagid::UuidGenerator;
+/// }
+///
+/// let user_id = User::next_id();
+/// println!("User ID: {}", user_id);
+/// ```
 pub struct Id<T: ?Sized, ID> {
+    /// The label associated with the entity type.
     pub label: SmolStr,
+
+    /// The unique identifier value.
     pub id: ID,
+
     marker: PhantomData<T>,
 }
 
@@ -42,10 +135,20 @@ unsafe impl<T: ?Sized, ID: Send> Send for Id<T, ID> {}
 #[allow(unsafe_code)]
 unsafe impl<T: ?Sized, ID: Sync> Sync for Id<T, ID> {}
 
+impl<T: ?Sized, ID> AsRef<ID> for Id<T, ID> {
+    /// Returns the inner string representation of the `ID`.
+    ///
+    /// This method provides access to the underlying id value as a `&ID`.
+    fn as_ref(&self) -> &ID {
+        &self.id
+    }
+}
+
 impl<E> Id<E, <<E as Entity>::IdGen as IdGenerator>::IdType>
 where
     E: ?Sized + Entity + Label,
 {
+    /// Generates a new `Id` using the entity's [`IdGenerator`].
     pub fn new() -> Self {
         let labeler = <E as Label>::labeler();
         Self {
@@ -74,6 +177,7 @@ impl<T: ?Sized + Label, ID> Id<T, ID> {
 }
 
 impl<T: ?Sized, ID> Id<T, ID> {
+    /// Creates an `Id` with a specific label and ID value.
     pub fn direct(label: impl AsRef<str>, id: ID) -> Self {
         Self {
             label: SmolStr::new(label.as_ref()),
@@ -84,6 +188,7 @@ impl<T: ?Sized, ID> Id<T, ID> {
 }
 
 impl<T: ?Sized, ID: Clone> Id<T, ID> {
+    /// Converts the `Id` to another entity type while retaining the same ID value.
     pub fn relabel<B: Label>(&self) -> Id<B, ID> {
         let b_labeler = B::labeler();
         Id {
@@ -183,7 +288,7 @@ where
     DB: sqlx::Database,
 {
     fn decode(
-        value: <DB as sqlx::database::HasValueRef<'q>>::ValueRef,
+        value: <DB as sqlx::Database>::ValueRef<'q>,
     ) -> Result<Self, sqlx::error::BoxDynError> {
         let value = <ID as sqlx::Decode<DB>>::decode(value)?;
         Ok(Self::for_labeled(value))
@@ -198,8 +303,8 @@ where
 {
     fn encode_by_ref(
         &self,
-        buf: &mut <DB as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
-    ) -> sqlx::encode::IsNull {
+        buf: &mut <DB as sqlx::Database>::ArgumentBuffer<'q>,
+    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
         <ID as sqlx::Encode<DB>>::encode_by_ref(&self.id, buf)
     }
 }
@@ -231,7 +336,7 @@ impl<T, ID: fmt::Display> IntoIdentifierValue for Id<T, ID> {
 mod tests {
     use super::*;
     use crate::{CustomLabeling, MakeLabeling, NoLabeling};
-    use claim::*;
+    use assert_matches2::assert_let;
     use pretty_assertions::assert_eq;
     use serde_test::{assert_tokens, Token};
     use static_assertions::assert_impl_all;
@@ -377,10 +482,10 @@ mod tests {
         let labeler = <Foo as Label>::labeler();
         let cuid = "ig6wv6nezj0jg51lg53dztqy".to_string();
         let id = Id::<Foo, String>::direct(labeler.label(), cuid);
-        assert_tokens(&id, &vec![Token::Str("ig6wv6nezj0jg51lg53dztqy")]);
+        assert_tokens(&id, &[Token::Str("ig6wv6nezj0jg51lg53dztqy")]);
 
         let id = Id::<Foo, u64>::direct(labeler.label(), 17);
-        assert_tokens(&id, &vec![Token::U64(17)]);
+        assert_tokens(&id, &[Token::U64(17)]);
     }
 
     #[test]
@@ -389,21 +494,21 @@ mod tests {
 
         let cuid = "ig6wv6nezj0jg51lg53dztqy".to_string();
         let id = Id::<Foo, String>::direct(labeler.label(), cuid);
-        let json = assert_ok!(serde_json::to_string(&id));
-        let actual: Id<Foo, String> = assert_ok!(serde_json::from_str(&json));
+        assert_let!(Ok(json) = serde_json::to_string(&id));
+        assert_let!(Ok(actual) = serde_json::from_str::<Id<Foo, String>>(&json));
         assert_eq!(actual, id);
 
         let id = Id::<Foo, u64>::direct(labeler.label(), 17);
-        let json = assert_ok!(serde_json::to_string(&id));
-        let actual: Id<Foo, u64> = assert_ok!(serde_json::from_str(&json));
+        assert_let!(Ok(json) = serde_json::to_string(&id));
+        assert_let!(Ok(actual) = serde_json::from_str::<Id<Foo, u64>>(&json));
         assert_eq!(actual, id);
 
         #[cfg(feature = "uuid")]
         {
             let uuid = uuid::Uuid::new_v4();
-            let id = Id::<Foo, uuid::Uuid>::direct(labeler.label(), uuid.clone());
-            let json = assert_ok!(serde_json::to_string(&id));
-            let actual: Id<Foo, uuid::Uuid> = assert_ok!(serde_json::from_str(&json));
+            let id = Id::<Foo, uuid::Uuid>::direct(labeler.label(), uuid);
+            assert_let!(Ok(json) = serde_json::to_string(&id));
+            assert_let!(Ok(actual) = serde_json::from_str::<Id<Foo, uuid::Uuid>>(&json));
             assert_eq!(actual, id);
         }
     }
