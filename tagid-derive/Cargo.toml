@@ -1,7 +1,16 @@
 [package]
 name = "tagid-derive"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
+authors = ["Damon Rolfs <drolfs@gmail.com>"]
+description = "Defines a derive macro for the tagid newtype labeled tagging for different types of ids."
+license = "MIT"
+repository = "https://github.com/dmrolfs/tagid-rs"
+homepage = "https://github.com/dmrolfs/tagid-rs"
+documentation = "https://docs.rs/tagid"
+readme = "README.md"
+keywords = ["identifier", "id", "cuid", "snowflake", "uuid"]
+categories = ["data-structures", "development-tools"]
 
 [dependencies]
 proc-macro2 = "1.0.51"
