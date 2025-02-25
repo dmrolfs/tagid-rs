@@ -41,7 +41,7 @@ pub struct SnowflakeGenerator {
     machine_node: MachineNode,
 
     /// The underlying Snowflake ID generator.
-    gen: Arc<Mutex<SnowflakeGen>>,
+    generator: Arc<Mutex<SnowflakeGen>>,
 }
 
 impl SnowflakeGenerator {
@@ -78,7 +78,7 @@ impl SnowflakeGenerator {
     ///
     /// A reference to the globally initialized `SnowflakeGenerator`.
     pub fn distributed(machine_node: MachineNode, strategy: GenerationStrategy) -> &'static Self {
-        let gen = SnowflakeGen::with_epoch(
+        let generator = SnowflakeGen::with_epoch(
             machine_node.machine_id,
             machine_node.node_id,
             time::UNIX_EPOCH,
@@ -86,7 +86,7 @@ impl SnowflakeGenerator {
         SNOWFLAKE_GENERATOR.get_or_init(|| Self {
             machine_node,
             strategy,
-            gen: Arc::new(Mutex::new(gen)),
+            generator: Arc::new(Mutex::new(generator)),
         })
     }
 }
@@ -103,11 +103,11 @@ impl IdGenerator for SnowflakeGenerator {
     /// A unique `i64` ID.
     fn next_id_rep() -> Self::IdType {
         let generator = Self::summon();
-        let mut gen = generator.gen.lock().unwrap();
+        let mut g = generator.generator.lock().unwrap();
         match generator.strategy {
-            GenerationStrategy::RealTime => gen.real_time_generate(),
-            GenerationStrategy::Generate => gen.generate(),
-            GenerationStrategy::Lazy => gen.lazy_generate(),
+            GenerationStrategy::RealTime => g.real_time_generate(),
+            GenerationStrategy::Generate => g.generate(),
+            GenerationStrategy::Lazy => g.lazy_generate(),
         }
     }
 }

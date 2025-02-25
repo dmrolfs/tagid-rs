@@ -6,7 +6,7 @@ use crate::{Entity, Id, Label, Labeling};
 use frunk::{Monoid, Semigroup};
 use iso8601_timestamp::Timestamp;
 use pretty_type_name::pretty_type_name;
-use serde::{de, ser::SerializeStruct, Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize, Serializer, de, ser::SerializeStruct};
 use std::fmt;
 use std::future::Future;
 use std::marker::PhantomData;

@@ -54,22 +54,23 @@
 //! tagid = { version = "0.2", features = ["uuid", "snowflake"] }
 //! ```
 
-mod gen;
-pub use gen::IdGenerator;
+mod generator;
+pub use generator::IdGenerator;
 
 #[cfg(feature = "cuid")]
-pub use gen::{CuidGenerator, CuidId};
+pub use generator::{CuidGenerator, CuidId};
 
 #[cfg(feature = "uuid")]
-pub use gen::UuidGenerator;
+pub use generator::UuidGenerator;
 
 #[cfg(feature = "snowflake")]
 pub mod snowflake;
 
 #[cfg(feature = "snowflake")]
-pub use self::snowflake::{pretty, MachineNode, SnowflakeGenerator};
+#[allow(unused_imports)]
+pub use self::snowflake::{MachineNode, SnowflakeGenerator, pretty};
 
-use crate::{Label, Labeling, DELIMITER};
+use crate::{DELIMITER, Label, Labeling};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use smol_str::SmolStr;
@@ -338,7 +339,7 @@ mod tests {
     use crate::{CustomLabeling, MakeLabeling, NoLabeling};
     use assert_matches2::assert_let;
     use pretty_assertions::assert_eq;
-    use serde_test::{assert_tokens, Token};
+    use serde_test::{Token, assert_tokens};
     use static_assertions::assert_impl_all;
 
     #[test]

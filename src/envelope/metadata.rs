@@ -3,7 +3,7 @@ use crate::id::IdGenerator;
 use crate::{Entity, Id, Label, Labeling};
 use iso8601_timestamp::Timestamp;
 use pretty_type_name::pretty_type_name;
-use serde::{de, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt;
@@ -228,11 +228,7 @@ where
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        if self < rhs {
-            rhs
-        } else {
-            self
-        }
+        if self < rhs { rhs } else { self }
     }
 }
 
@@ -437,7 +433,7 @@ mod tests {
     use once_cell::sync::Lazy;
     use pretty_assertions::assert_eq;
     use serde_test::Configure;
-    use serde_test::{assert_tokens, Token};
+    use serde_test::{Token, assert_tokens};
 
     const METADATA_TS: &str = "2022-11-30T03:43:18.068Z";
 

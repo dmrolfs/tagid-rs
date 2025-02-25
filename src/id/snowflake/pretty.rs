@@ -8,11 +8,11 @@ mod codec;
 mod damm;
 mod prettifier;
 
-pub use codec::{Alphabet, AlphabetCodec, Codec, BASE_23};
+pub use codec::{Alphabet, AlphabetCodec, BASE_23, Codec};
 pub use prettifier::{ConversionError, IdPrettifier};
 
-use crate::id::IdGenerator;
 use crate::SnowflakeGenerator;
+use crate::id::IdGenerator;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 use std::fmt;

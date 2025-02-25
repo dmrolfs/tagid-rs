@@ -1,6 +1,6 @@
-mod gen;
+mod generator;
 mod node;
 pub mod pretty;
 
-pub use gen::{GenerationStrategy, SnowflakeGenerator};
+pub use generator::{GenerationStrategy, SnowflakeGenerator};
 pub use node::MachineNode;
