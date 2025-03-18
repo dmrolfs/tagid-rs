@@ -19,7 +19,8 @@ It supports multiple ID generation strategies (CUID, UUID, Snowflake) and integr
 - **Serialization & Database Support**:
     - [`serde`] integration for JSON and binary serialization (`serde` feature).
     - [`sqlx`] integration for database storage (`sqlx` feature).
-- **Custom Labeling**: Define custom label formats for entities.
+- **Custom Labeling**: Define custom label formats for entities, which can be useful to disambiguate
+  ids in logging.
 
 ## Installation
 
@@ -27,20 +28,21 @@ Add `tagid` to your `Cargo.toml`, enabling the desired features:
 
 ```toml
 [dependencies]
-tagid = { version = "0.1", features = ["uuid", "sqlx"] }
+tagid = { version = "0.3.1", features = ["uuid", "serde", "sqlx"] }
 ```
 
 ## Optional Features
 
-| Feature       | Description                                                   |
-|--------------|---------------------------------------------------------------|
-| `"derive"`   | Enables `#[derive(Label)]` macro for automatic labeling.      |
-| `"cuid"`     | Enables the [`CuidGenerator`] for CUID-based IDs.             |
-| `"uuid"`     | Enables the [`UuidGenerator`] for UUID-based IDs.             |
-| `"snowflake"`| Enables the [`SnowflakeGenerator`] for distributed IDs.       |
-| `"serde"`    | Enables serialization support via `serde`.                    |
-| `"sqlx"`     | Enables database integration via `sqlx`.                      |
-| `"envelope"` | Provides an envelope struct for wrapping IDs with metadata.   |
+| Feature          | Description                                                 |
+|------------------|-------------------------------------------------------------|
+| `"derive"`       | Enables `#[derive(Label)]` macro for automatic labeling.    |
+| `"cuid"`         | Enables the [`CuidGenerator`] for CUID-based IDs.           |
+| `"uuid"`         | Enables the [`UuidGenerator`] for UUID-based IDs.           |
+| `"snowflake"`    | Enables the [`SnowflakeGenerator`] for distributed IDs.     |
+| `"serde"`        | Enables serialization support via `serde`.                  |
+| `"sqlx"`         | Enables database integration via `sqlx`.                    |
+| `"disintegrate"` | Enables tagid identifiers in `disintegrate`.                |
+| `"envelope"`     | Provides an envelope struct for wrapping IDs with metadata. |
 
 ## Usage
 

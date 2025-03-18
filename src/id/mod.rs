@@ -145,6 +145,12 @@ impl<T: ?Sized, ID> AsRef<ID> for Id<T, ID> {
     }
 }
 
+impl<T: ?Sized + Label, ID> From<ID> for Id<T, ID> {
+    fn from(id: ID) -> Self {
+        Self::for_labeled(id)
+    }
+}
+
 impl<E> Id<E, <<E as Entity>::IdGen as IdGenerator>::IdType>
 where
     E: ?Sized + Entity + Label,
@@ -185,6 +191,11 @@ impl<T: ?Sized, ID> Id<T, ID> {
             id,
             marker: PhantomData,
         }
+    }
+
+    /// Consumes the `Id<T, ID>`, returning the inner `ID` value.
+    pub fn into_inner(self) -> ID {
+        self.id
     }
 }
 
