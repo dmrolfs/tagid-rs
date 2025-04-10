@@ -41,6 +41,9 @@ pub use self::cuid::{CuidGenerator, CuidId};
 #[cfg(feature = "uuid")]
 pub use self::uuid::UuidGenerator;
 
+#[cfg(feature = "ulid")]
+pub use self::ulid::UlidGenerator;
+
 #[cfg(feature = "cuid")]
 mod cuid {
     use super::*;
@@ -111,6 +114,21 @@ mod uuid {
         /// * A unique `Uuid` identifier.
         fn next_id_rep() -> Self::IdType {
             ::uuid::Uuid::new_v4()
+        }
+    }
+}
+
+#[cfg(feature = "ulid")]
+mod ulid {
+    use super::*;
+
+    pub struct UlidGenerator;
+
+    impl IdGenerator for UlidGenerator {
+        type IdType = ::ulid::Ulid;
+
+        fn next_id_rep() -> Self::IdType {
+            ::ulid::Ulid::from_datetime(std::time::SystemTime::now())
         }
     }
 }

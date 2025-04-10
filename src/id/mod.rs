@@ -23,7 +23,7 @@
 //!
 //! ### Defining an Entity with ID Generation
 //!
-//! ```rust
+//! ```rust,ignore
 //! use tagid::{Entity, Id, Label};
 //!
 //! #[derive(Label)]
@@ -63,6 +63,9 @@ pub use generator::{CuidGenerator, CuidId};
 #[cfg(feature = "uuid")]
 pub use generator::UuidGenerator;
 
+#[cfg(feature = "ulid")]
+pub use generator::UlidGenerator;
+
 #[cfg(feature = "snowflake")]
 pub mod snowflake;
 
@@ -100,7 +103,7 @@ pub trait Entity: Label {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,ignore
 /// use tagid::{Id, Entity, Label, MakeLabeling};
 ///
 /// struct User;

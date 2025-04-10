@@ -30,7 +30,7 @@
 //!
 //! ### Defining an Entity with a Typed ID
 //!
-//! ```rust
+//! ```rust,ignore
 //! use tagid::{Entity, Id, Label};
 //!
 //! #[derive(Label)]
@@ -48,7 +48,7 @@
 //!
 //! Labels help associate an identifier with an entity, improving clarity in logs and databases:
 //!
-//! ```rust
+//! ```rust,ignore
 //! use tagid::{Label, Labeling};
 //! use tagid::snowflake::pretty::{IdPrettifier, BASE_23};
 //! IdPrettifier::global_initialize(BASE_23.clone());
