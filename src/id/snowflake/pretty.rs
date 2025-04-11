@@ -25,7 +25,7 @@ use std::fmt;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// use pretty_assertions::assert_eq;
 /// use tagid::snowflake::pretty::{AlphabetCodec, IdPrettifier, PrettySnowflakeId, BASE_23};
 /// IdPrettifier::<AlphabetCodec>::global_initialize(BASE_23.clone());

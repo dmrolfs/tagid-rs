@@ -8,9 +8,10 @@
 //!
 //! - **Typed Identifiers**: Define entity-specific IDs with compile-time safety.
 //! - **Multiple ID Generators**:
-//!   - **CUID** (`cuid` feature) - Compact, collision-resistant IDs.
-//!   - **UUID** (`uuid` feature) - Universally unique identifiers.
-//!   - **Snowflake** (`snowflake` feature) - Time-based, distributed IDs.
+//!   - **CUID** (`with-cuid` feature) - Compact, collision-resistant IDs.
+//!   - **ULID** (`with-ulid` feature) - Universally unique identifiers.
+//!   - **UUID** (`with-uuid` feature) - Universally unique identifiers.
+//!   - **Snowflake** (`with-snowflake` feature) - Time-based, distributed IDs.
 //! - **Entity Labeling**: Labels provide contextual meaning to identifiers.
 //! - **Serialization & Database Support**:
 //!   - [`serde`] integration for JSON and binary serialization (`serde` feature).
@@ -23,7 +24,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! tagid = { version = "0.1", features = ["uuid", "sqlx"] }
+//! tagid = { version = "0.1", features = ["with-uuid", "sqlx"] }
 //! ```
 //!
 //! ## Usage
@@ -66,9 +67,10 @@
 //! | Feature       | Description                                                   |
 //! |--------------|---------------------------------------------------------------|
 //! | `"derive"`   | Enables `#[derive(Label)]` macro for automatic labeling.      |
-//! | `"cuid"`     | Enables the [`CuidGenerator`] for CUID-based IDs.             |
-//! | `"uuid"`     | Enables the [`UuidGenerator`] for UUID-based IDs.             |
-//! | `"snowflake"`| Enables the [`SnowflakeGenerator`] for distributed IDs.       |
+//! | `"with-cuid"`     | Enables the [`CuidGenerator`] for CUID-based IDs.             |
+//! | `"with-ulid"`     | Enables the [`UlidGenerator`] for ULID-based IDs.             |
+//! | `"with-uuid"`     | Enables the [`UuidGenerator`] for UUID-based IDs.             |
+//! | `"with-snowflake"`| Enables the [`SnowflakeGenerator`] for distributed IDs.       |
 //! | `"serde"`    | Enables serialization support via `serde`.                    |
 //! | `"sqlx"`     | Enables database integration via `sqlx`.                      |
 //! | `"envelope"` | Provides an envelope struct for wrapping IDs with metadata.   |
@@ -100,14 +102,17 @@ pub use id::{Entity, Id, IdGenerator};
 pub use label::Label;
 pub use labeling::{CustomLabeling, Labeling, MakeLabeling, NoLabeling};
 
-#[cfg(feature = "cuid")]
+#[cfg(feature = "with-cuid")]
 pub use id::{CuidGenerator, CuidId};
 
-#[cfg(feature = "uuid")]
+#[cfg(feature = "with-ulid")]
+pub use id::UlidGenerator;
+
+#[cfg(feature = "with-uuid")]
 pub use id::UuidGenerator;
 
-#[cfg(feature = "snowflake")]
-pub use id::snowflake::{self, MachineNode, SnowflakeGenerator};
+#[cfg(feature = "with-snowflake")]
+pub use id::{MachineNode, SnowflakeGenerator, snowflake};
 
 // The default delimiter used to separate entity labels from their ID values.
 pub const DELIMITER: &str = "::";

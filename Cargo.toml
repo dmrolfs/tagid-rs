@@ -26,12 +26,14 @@ suspicious = "warn"
 resolver = "2"
 
 [features]
-default = ["derive", "cuid"]
+default = ["derive", "with-cuid"]
 derive = ["tagid-derive"]
-cuid = ["cuid2"]
-snowflake = ["rs-snowflake"]
 envelope = ["iso8601-timestamp"]
 functional = ["frunk"]
+with-uuid = ["uuid"]
+with-cuid = ["cuid2"]
+with-ulid = ["ulid"]
+with-snowflake = ["rs-snowflake"]
 
 [dependencies]
 cuid2 = { optional = true, version = "^0.1" }
@@ -40,14 +42,15 @@ rs-snowflake = { optional = true, version = "^0.6" }
 ulid = { optional = true, version = "^1.2", features = ["serde",]}
 
 tagid-derive = { version = "^0.2", optional = true }
-disintegrate = { version = "^2.0", optional = true }
-#disintegrate = { path =  "../../rust/disintegrate/disintegrate", optional = true }
-sqlx = {  version = "^0.8", optional = true }
+#disintegrate = { version = "^2.0", optional = true }
+disintegrate = { path =  "../../rust/disintegrate/disintegrate", optional = true }
+sqlx = {  version = "^0.8", features = ["postgres", "uuid"], optional = true }
 frunk = { optional = true, version = "^0.4" }
 iso8601-timestamp = { optional = true, version = "^0.3", default-features = true }
 itertools = "^0.14"
 once_cell = "^1.20"
 pretty-type-name = "^1.0"
+rand = "^0.9"
 serde = { version = "^1.0", features = ["derive"] }
 smol_str = { version = "^0.3", default-features = true, features = ["serde"] }
 strum = "^0.27"
