@@ -106,7 +106,7 @@ pub use labeling::{CustomLabeling, Labeling, MakeLabeling, NoLabeling};
 pub use id::{CuidGenerator, CuidId};
 
 #[cfg(feature = "with-ulid")]
-pub use id::UlidGenerator;
+pub use id::{Ulid, UlidGenerator, UlidId};
 
 #[cfg(feature = "with-uuid")]
 pub use id::UuidGenerator;

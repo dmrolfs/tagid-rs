@@ -68,7 +68,7 @@ pub use cuid::{CuidGenerator, CuidId};
 pub mod ulid;
 #[cfg(feature = "with-ulid")]
 #[allow(unused_imports)]
-pub use ulid::{UlidGenerator, UlidId};
+pub use ulid::{Ulid, UlidGenerator, UlidId};
 
 #[cfg(feature = "with-uuid")]
 mod uuid;
@@ -82,8 +82,8 @@ pub mod snowflake;
 #[allow(unused_imports)]
 pub use self::snowflake::{MachineNode, SnowflakeGenerator, pretty};
 
-mod id;
-pub use id::Id;
+mod identifier;
+pub use identifier::Id;
 
 use crate::Label;
 use std::hash::Hash;
