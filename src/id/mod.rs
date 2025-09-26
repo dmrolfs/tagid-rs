@@ -86,7 +86,6 @@ mod identifier;
 pub use identifier::Id;
 
 use crate::Label;
-use std::hash::Hash;
 
 /// A trait for entities that have a unique identifier.
 ///
