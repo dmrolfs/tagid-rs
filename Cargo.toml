@@ -42,8 +42,8 @@ rs-snowflake = { optional = true, version = "^0.6" }
 ulid = { optional = true, version = "^1.2", features = ["serde",]}
 
 tagid-derive = { version = "^0.2", optional = true }
-#disintegrate = { version = "^2.0", optional = true }
-disintegrate = { path =  "../../rust/disintegrate/disintegrate", optional = true }
+disintegrate = { version = "^2.0", optional = true }
+# disintegrate = { path =  "../../rust/disintegrate/disintegrate", optional = true }
 sqlx = {  version = "^0.8", features = ["postgres", "uuid"], optional = true }
 frunk = { optional = true, version = "^0.4" }
 iso8601-timestamp = { optional = true, version = "^0.3", default-features = true }
