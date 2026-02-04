@@ -86,6 +86,10 @@ mod identifier;
 pub use identifier::Id;
 
 pub mod provenance;
+
+pub mod sourced;
+#[allow(unused_imports)]
+pub use sourced::Sourced;
 #[allow(unused_imports)]
 pub use provenance::{
     Provenance, LabelPolicy, External, Generated, Imported, Derived, Scoped, Temporary,
@@ -112,8 +116,9 @@ pub trait Entity: Label {
 mod tests {
     use super::*;
     use crate::Labeling;
-    use crate::id::ulid::Ulid;
     use crate::{CustomLabeling, MakeLabeling, NoLabeling};
+    #[cfg(feature = "with-ulid")]
+    use crate::id::ulid::Ulid;
     use assert_matches2::assert_let;
     use pretty_assertions::assert_eq;
     use serde_test::{Token, assert_tokens};
