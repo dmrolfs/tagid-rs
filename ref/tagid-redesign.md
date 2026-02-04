@@ -1,5 +1,4 @@
 ---
-Source: Consolidated from spark-turtle design sessions (Phase 3)
 Date: 2026-02-03
 Notes: Definitive guide to tagid-rs architecture, motivation, and design principles.
 ---
