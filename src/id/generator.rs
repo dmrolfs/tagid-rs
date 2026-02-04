@@ -2,7 +2,7 @@
 //!
 //! This module defines the `IdGenerator` trait and provides implementations for generating unique
 //! identifiers using different strategies, including CUID and UUID. The choice of ID generator
-//! is controlled through feature flags (`with-cuid`, `with-ulid`, and `with-uuid`).
+//! is controlled through feature flags (`cuid`, `ulid`, and `uuid`).
 
 /// A trait for generating unique identifiers.
 ///

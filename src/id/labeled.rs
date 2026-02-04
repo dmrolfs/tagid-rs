@@ -124,3 +124,107 @@ impl<T: ?Sized + Label, ID: fmt::Debug> fmt::Debug for Labeled<'_, T, ID> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::CustomLabeling;
+    use crate::NoLabeling;
+
+    struct Foo;
+    impl Label for Foo {
+        type Labeler = CustomLabeling;
+        fn labeler() -> Self::Labeler {
+            CustomLabeling::new("MyFooferNut")
+        }
+    }
+
+    struct NoLabelZed;
+    impl Label for NoLabelZed {
+        type Labeler = NoLabeling;
+        fn labeler() -> Self::Labeler {
+            NoLabeling
+        }
+    }
+
+    #[test]
+    fn test_label_policy_to_mode_conversion() {
+        assert_eq!(LabelMode::from(LabelPolicy::Opaque), LabelMode::None);
+        assert_eq!(
+            LabelMode::from(LabelPolicy::OpaqueByDefault),
+            LabelMode::None
+        );
+        assert_eq!(
+            LabelMode::from(LabelPolicy::EntityNameDefault),
+            LabelMode::Short
+        );
+        assert_eq!(
+            LabelMode::from(LabelPolicy::ExternalKeyDefault),
+            LabelMode::Full
+        );
+    }
+
+    #[test]
+    fn test_labeled_none_mode() {
+        let id: Id<Foo, String> = Id::direct("Label", "value".into());
+        assert_eq!(id.labeled().mode(LabelMode::None).to_string(), "value");
+    }
+
+    #[test]
+    fn test_labeled_short_mode() {
+        let id: Id<Foo, String> = Id::direct("Label", "value".into());
+        assert_eq!(
+            id.labeled().mode(LabelMode::Short).to_string(),
+            "Label::value"
+        );
+    }
+
+    #[test]
+    fn test_labeled_full_mode() {
+        let id: Id<Foo, String> = Id::direct("_", "value".into());
+        let full = id.labeled().mode(LabelMode::Full).to_string();
+        // Full uses decorated_label() from Foo::labeler()
+        assert!(full.contains("value"));
+        assert!(full.contains("MyFooferNut")); // Type-derived
+    }
+
+    #[test]
+    fn test_labeled_full_ignores_stored_label() {
+        // CRITICAL SEMANTIC: LabelMode::Full uses T::labeler(), not id.label
+        let id: Id<Foo, String> = Id::direct("WRONG", "value".into());
+
+        let short = id.labeled().mode(LabelMode::Short).to_string();
+        assert!(short.contains("WRONG")); // Stored label used
+
+        let full = id.labeled().mode(LabelMode::Full).to_string();
+        assert!(!full.contains("WRONG")); // Stored label ignored
+        assert!(full.contains("MyFooferNut")); // Type-derived label used
+    }
+
+    #[test]
+    fn test_labeled_empty_label_short_mode() {
+        let id: Id<NoLabelZed, String> = Id::direct("", "value".into());
+        // Short mode with empty label should fall back to just value
+        let short = id.labeled().mode(LabelMode::Short).to_string();
+        assert_eq!(short, "value");
+    }
+
+    #[test]
+    fn test_labeled_debug_modes() {
+        let id: Id<Foo, u64> = Id::direct("Label", 42u64);
+
+        assert_eq!(id.labeled().mode(LabelMode::None).to_string(), "42");
+        assert_eq!(id.labeled().mode(LabelMode::Short).to_string(), "Label::42");
+    }
+
+    #[test]
+    fn test_labeled_builder_pattern() {
+        let id: Id<Foo, String> = Id::direct("L", "v".into());
+
+        let labeled_none = id.labeled().mode(LabelMode::None);
+        assert_eq!(labeled_none.to_string(), "v");
+
+        let labeled_short = id.labeled().mode(LabelMode::Short);
+        assert_eq!(labeled_short.to_string(), "L::v");
+    }
+}

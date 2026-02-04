@@ -172,7 +172,7 @@ pub use crate::LabelPolicy;
 /// pub type GithubUserId = TagId<User, External<Github>>;
 /// pub type SparkAppId = TagId<App, External<Spark>>;
 /// ```
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct External<Provider = ()>(PhantomData<Provider>);
 
 // Generic implementation for External without vendor (catches External<()> and unknown types)
@@ -273,7 +273,7 @@ impl Provenance for External<providers::Nessie> {
 /// let user_id = UserId::generate();
 /// let tenant_id = TenantId::generate();
 /// ```
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Generated<Strategy = ()>(PhantomData<Strategy>);
 
 impl<S> Provenance for Generated<S>
@@ -307,7 +307,7 @@ where
 /// pub type LegacyUserId = TagId<User, Imported<LegacyDatabase>>;
 /// pub type MigratedJobId = TagId<Job, Imported<SparkMigration>>;
 /// ```
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Imported<From = ()>(PhantomData<From>);
 
 impl<F> Provenance for Imported<F>
@@ -341,7 +341,7 @@ where
 /// pub type SlugId = TagId<Page, Derived<Slugify>>;
 /// pub type ContentId = TagId<Content, Derived<ContentHash>>;
 /// ```
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Derived<Method = ()>(PhantomData<Method>);
 
 impl<M> Provenance for Derived<M>
@@ -377,7 +377,7 @@ where
 /// // Each tenant has its own resource namespace
 /// let resource_id = TenantResourceId::<File>::generate();
 /// ```
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Scoped<Scope = (), Inner = ()>(PhantomData<(Scope, Inner)>);
 
 impl<Scope, Inner> Provenance for Scoped<Scope, Inner>
@@ -468,7 +468,7 @@ impl Provenance for ClientProvided {
 /// let email_alias = UserEmailAlias::new("user@example.com");
 /// ```
 #[allow(dead_code)]
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct AliasOf<Canonical = ()>(PhantomData<Canonical>);
 
 impl<C> Provenance for AliasOf<C>
@@ -630,6 +630,7 @@ pub mod strategies {
 mod tests {
     use super::*;
     use crate::id::sourced::Sourced;
+    use crate::labeling::Labeling;
     use crate::{Entity, Id, IdGenerator, Label, MakeLabeling};
     use pretty_assertions::assert_eq;
 
@@ -643,6 +644,7 @@ mod tests {
         }
     }
 
+    #[derive(Debug, PartialEq)]
     struct User;
     impl Label for User {
         type Labeler = MakeLabeling<Self>;
@@ -660,6 +662,15 @@ mod tests {
         fn labeler() -> Self::Labeler {
             MakeLabeling::default()
         }
+    }
+
+    // Custom provenance for metadata testing
+    #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+    struct MetaProv;
+    impl Provenance for MetaProv {
+        const NAME: &'static str = "meta";
+        const SLUG: &'static str = "met";
+        type Descriptor = u32;
     }
 
     // --- Type Aliases for Extended Testing ---
@@ -694,6 +705,51 @@ mod tests {
         assert_eq!(Temporary::NAME, "temporary");
         assert_eq!(ClientProvided::NAME, "client-provided");
         assert_eq!(AliasOf::<()>::NAME, "alias");
+    }
+
+    #[test]
+    fn test_all_core_provenance_slugs() {
+        assert_eq!(External::<()>::SLUG, "ext");
+        assert_eq!(Generated::<()>::SLUG, "gen");
+        assert_eq!(Imported::<()>::SLUG, "imp");
+        assert_eq!(Derived::<()>::SLUG, "der");
+        assert_eq!(Scoped::<(), Generated<()>>::SLUG, "sco");
+        assert_eq!(Temporary::SLUG, "tmp");
+        assert_eq!(ClientProvided::SLUG, "cli");
+        assert_eq!(AliasOf::<()>::SLUG, "als");
+    }
+
+    #[test]
+    fn test_vendor_providers_expose_constants() {
+        // Verify Vendor trait provides VENDOR constants
+        assert_eq!(providers::Stripe::VENDOR, "stripe");
+        assert_eq!(providers::Github::VENDOR, "github");
+        assert_eq!(providers::Spark::VENDOR, "spark");
+        assert_eq!(providers::Okta::VENDOR, "okta");
+    }
+
+    #[test]
+    fn test_with_provenance_stores_both_fields() {
+        let labeler = User::labeler();
+        let id =
+            Id::<Sourced<User, MetaProv>, String>::direct(labeler.label(), "test-id".to_string());
+        let desc = 42u32;
+        let with_prov = WithProvenance::new(id.clone(), desc);
+
+        assert_eq!(with_prov.id, id);
+        assert_eq!(with_prov.descriptor, desc);
+    }
+
+    #[test]
+    fn test_with_provenance_equality() {
+        let labeler = User::labeler();
+        let id = Id::<Sourced<User, MetaProv>, String>::direct(labeler.label(), "id".to_string());
+        let a = WithProvenance::new(id.clone(), 1u32);
+        let b = WithProvenance::new(id.clone(), 1u32);
+        let c = WithProvenance::new(id, 2u32);
+
+        assert_eq!(a, b);
+        assert_ne!(a, c); // Different descriptor
     }
 
     #[test]
@@ -733,7 +789,10 @@ mod tests {
         let stripe_id = StripeId::for_labeled("cus_123".to_string());
         // Default .labeled() should be Full: Entity@slug/vendor::value
         // Stripe provider includes vendor in slug display
-        assert_eq!(stripe_id.labeled().to_string(), "Customer@ext/stripe::cus_123");
+        assert_eq!(
+            stripe_id.labeled().to_string(),
+            "Customer@ext/stripe::cus_123"
+        );
 
         // 2. Generated (EntityNameDefault -> Short)
         let user_id = UserId::direct("User", "user-123".to_string());
@@ -788,21 +847,21 @@ mod tests {
     #[test]
     fn test_providers_are_cloneable() {
         let stripe = providers::Stripe;
-        let _stripe_clone = stripe.clone();
+        let _stripe_clone = stripe;
 
         let github = providers::Github;
-        let _github_clone = github.clone();
+        let _github_clone = github;
 
         let spark = providers::Spark;
-        let _spark_clone = spark.clone();
+        let _spark_clone = spark;
     }
 
     #[test]
     fn test_strategies_are_cloneable() {
         let uuid_v7 = strategies::UuidV7;
-        let _uuid_v7_clone = uuid_v7.clone();
+        let _uuid_v7_clone = uuid_v7;
 
         let snowflake = strategies::Snowflake;
-        let _snowflake_clone = snowflake.clone();
+        let _snowflake_clone = snowflake;
     }
 }

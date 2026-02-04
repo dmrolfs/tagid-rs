@@ -12,7 +12,8 @@
 //! 6. **Metadata Separation**: Using `WithProvenance` for auxiliary data.
 
 use tagid::id::provenance::{External, Imported, Temporary, WithProvenance, providers};
-use tagid::{Id, Label, Sourced};
+use tagid::id::{Generated, strategies};
+use tagid::{Entity, Id, Label, LabelMode, Sourced};
 
 // ============================================================================
 // ENTITY DEFINITIONS

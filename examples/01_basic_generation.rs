@@ -3,7 +3,10 @@
 //! This example shows how to use `Generated` provenance for IDs created
 //! internally by your application.
 
-use tagid::{Label, MakeLabeling};
+use tagid::{
+    Entity, Id, Label, MakeLabeling, Sourced,
+    id::{Generated, strategies},
+};
 
 // Define an entity type.
 #[allow(dead_code)]
@@ -46,6 +49,6 @@ fn main() {
         );
     }
 
-    #[cfg(not(feature = "with-uuid"))]
-    println!("This example requires the 'with-uuid' feature.");
+    #[cfg(not(feature = "uuid"))]
+    println!("This example requires the 'uuid' feature.");
 }

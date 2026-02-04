@@ -8,10 +8,10 @@
 //!
 //! - **Typed Identifiers**: Define entity-specific IDs with compile-time safety.
 //! - **Multiple ID Generators**:
-//!   - **CUID** (`with-cuid` feature) - Compact, collision-resistant IDs.
-//!   - **ULID** (`with-ulid` feature) - Universally unique identifiers.
-//!   - **UUID** (`with-uuid` feature) - Universally unique identifiers.
-//!   - **Snowflake** (`with-snowflake` feature) - Time-based, distributed IDs.
+//!   - **CUID** (`cuid` feature) - Compact, collision-resistant IDs.
+//!   - **ULID** (`ulid` feature) - Universally unique identifiers.
+//!   - **UUID** (`uuid` feature) - Universally unique identifiers.
+//!   - **Snowflake** (`snowflake` feature) - Time-based, distributed IDs.
 //! - **Entity Labeling**: Labels provide contextual meaning to identifiers.
 //! - **Serialization & Database Support**:
 //!   - [`serde`] integration for JSON and binary serialization (`serde` feature).
@@ -24,7 +24,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! tagid = { version = "0.1", features = ["with-uuid", "sqlx"] }
+//! tagid = { version = "0.1", features = ["uuid", "sqlx"] }
 //! ```
 //!
 //! ## Usage
@@ -67,10 +67,10 @@
 //! | Feature       | Description                                                   |
 //! |--------------|---------------------------------------------------------------|
 //! | `"derive"`   | Enables `#[derive(Label)]` macro for automatic labeling.      |
-//! | `"with-cuid"`     | Enables the [`CuidGenerator`] for CUID-based IDs.             |
-//! | `"with-ulid"`     | Enables the [`UlidGenerator`] for ULID-based IDs.             |
-//! | `"with-uuid"`     | Enables the [`UuidGenerator`] for UUID-based IDs.             |
-//! | `"with-snowflake"`| Enables the [`SnowflakeGenerator`] for distributed IDs.       |
+//! | `"cuid"`     | Enables the [`CuidGenerator`] for CUID-based IDs.             |
+//! | `"ulid"`     | Enables the [`UlidGenerator`] for ULID-based IDs.             |
+//! | `"uuid"`     | Enables the [`UuidGenerator`] for UUID-based IDs.             |
+//! | `"snowflake"`| Enables the [`SnowflakeGenerator`] for distributed IDs.       |
 //! | `"serde"`    | Enables serialization support via `serde`.                    |
 //! | `"sqlx"`     | Enables database integration via `sqlx`.                      |
 //! | `"envelope"` | Provides an envelope struct for wrapping IDs with metadata.   |

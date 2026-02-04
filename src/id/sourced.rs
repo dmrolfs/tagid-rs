@@ -64,6 +64,41 @@ use super::provenance::{Generated, Provenance};
 ///
 /// Since `Sourced` only uses `PhantomData`, `size_of::<Sourced<E, S>>()` is 0.
 /// The entire provenance system has zero runtime cost.
+///
+/// # Type Safety: Generate Only for Generated
+///
+/// `Sourced<E, Generated<S>>` implements `Entity`, allowing `.next_id()`.
+/// `Sourced<E, External<P>>` does NOT implement `Entity`, preventing accidents.
+///
+/// ```compile_fail
+/// use tagid::{Entity, Label, id::provenance::*};
+/// use tagid::id::Sourced;
+///
+/// struct User;
+/// impl Label for User {
+///     type Labeler = tagid::MakeLabeling<Self>;
+///     fn labeler() -> Self::Labeler { tagid::MakeLabeling::default() }
+/// }
+///
+/// // This should NOT compile:
+/// fn requires_entity<E: Entity>() {}
+/// requires_entity::<Sourced<User, External<()>>>();  // ERROR!
+/// ```
+///
+/// ```compile_fail
+/// use tagid::{Entity, Label, id::provenance::*};
+/// use tagid::id::Sourced;
+///
+/// struct User;
+/// impl Label for User {
+///     type Labeler = tagid::MakeLabeling<Self>;
+///     fn labeler() -> Self::Labeler { tagid::MakeLabeling::default() }
+/// }
+///
+/// // This should NOT compile:
+/// fn requires_entity<E: Entity>() {}
+/// requires_entity::<Sourced<User, Imported<()>>>();  // ERROR!
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct Sourced<E: ?Sized, S: Provenance> {
     /// Entity type (unused at runtime)

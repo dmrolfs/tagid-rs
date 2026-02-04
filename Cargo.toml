@@ -35,11 +35,7 @@ cuid = ["dep:cuid2"]
 ulid = ["dep:ulid"]
 snowflake = ["dep:rs-snowflake"]
 
-# Deprecated aliases for backward compatibility
-with-uuid = ["uuid"]
-with-cuid = ["cuid"]
-with-ulid = ["ulid"]
-with-snowflake = ["snowflake"]
+
 
 [dependencies]
 cuid2 = { optional = true, version = "^0.1" }

@@ -8,7 +8,7 @@
 //! characteristics.
 
 use tagid::id::provenance::{Generated, strategies};
-use tagid::{Entity, Id, Label, Sourced};
+use tagid::{Entity, Id, Label, LabelMode, Sourced};
 
 // ============================================================================
 // ENTITY DEFINITIONS

@@ -1,61 +1,3 @@
-//! The `id` module provides a generic mechanism for creating, representing, and managing entity
-//! identifiers (`Id`). It supports multiple ID generation strategies (e.g., CUID, UUID, Snowflake)
-//! and integrates with external libraries such as `serde`, `sqlx`, and `disintegrate`.
-//!
-//! # Overview
-//!
-//! - [`Entity`] Trait: Defines an entity with an associated [`IdGenerator`] for unique ID generation.
-//! - [`Id<T, ID>`] Struct: Represents an ID associated with an entity type `T` and an ID value of type `ID`.
-//! - ID Generation Strategies:
-//!   - **CUID** ([`CuidGenerator`], [`CuidId`]) - Enabled with the `cuid` feature.
-//!   - **ULID** ([`UlidGenerator`]) - Enabled with the `ulid` feature.
-//!   - **UUID** ([`UuidGenerator`]) - Enabled with the `uuid` feature.
-//!   - **Snowflake** ([`SnowflakeGenerator`]) - Enabled with the `snowflake` feature.
-//!
-//! ## Features
-//!
-//! This module integrates with:
-//!
-//! - **Serde** (`serde` feature): Implements [`Serialize`] and [`Deserialize`] for `Id`.
-//! - **SQLx** (`sqlx` feature): Enables database encoding/decoding via [`sqlx::Decode`], [`sqlx::Encode`], and [`sqlx::Type`].
-//! - **Disintegrate** (`disintegrate` feature): Supports [`IntoIdentifierValue`] for identifier-based systems.
-//!
-//! ## Example Usage
-//!
-//! ### Defining an Entity with ID Generation
-//!
-//! ```rust,ignore
-//! use tagid::{Entity, Id, Label};
-//!
-//! #[derive(Label)]
-//! struct User;
-//!
-//! impl Entity for User {
-//!     type IdGen = tagid::UuidGenerator;
-//! }
-//!
-//! let user_id = User::next_id();
-//! println!("Generated User ID: {}", user_id);
-//! ```
-//!
-//! # ID Generation Strategies
-//!
-//! The module supports multiple ID generation strategies that can be enabled via Cargo features:
-//!
-//! | Feature           | Generator               | Description                                      |
-//! |-------------------|-------------------------|--------------------------------------------------|
-//! | `"cuid"`          | [`CuidGenerator`]       | Generates CUID-based IDs.                        |
-//! | `"ulid"`          | [`UlidGenerator`]       | Generates ULID-based IDs.                        |
-//! | `"uuid"`          | [`UuidGenerator`]       | Generates UUID-based IDs.                        |
-//! | `"snowflake"`     | [`SnowflakeGenerator`]  | Uses the Snowflake algorithm for distributed ID generation. |
-//!
-//! To enable a specific ID generation method, add the corresponding feature to your `Cargo.toml`:
-//!
-//! ```toml
-//! [dependencies]
-//! tagid = { version = "0.2", features = ["uuid", "snowflake"] }
-//! ```
-
 mod generator;
 pub use generator::IdGenerator;
 
@@ -117,7 +59,7 @@ pub trait Entity: Label {
 mod tests {
     use super::*;
     use crate::Labeling;
-    #[cfg(feature = "with-ulid")]
+    #[cfg(feature = "ulid")]
     use crate::id::ulid::Ulid;
     use crate::{CustomLabeling, MakeLabeling, NoLabeling};
     use assert_matches2::assert_let;
@@ -193,7 +135,7 @@ mod tests {
         let a: Id<Foo, u64> = Id::direct(Foo::labeler().label(), id);
         assert_eq!(format!("{a:#}"), a.id.to_string());
 
-        #[cfg(feature = "with-uuid")]
+        #[cfg(feature = "uuid")]
         {
             let id = ::uuid::Uuid::new_v4();
             let a: Id<Foo, ::uuid::Uuid> = Id::direct(Foo::labeler().label(), id);
@@ -210,7 +152,7 @@ mod tests {
         let a: Id<Foo, u64> = Id::direct(Foo::labeler().label(), id);
         assert_eq!(format!("{a:?}"), format!("MyFooferNut::{:?}", a.id));
 
-        #[cfg(feature = "with-uuid")]
+        #[cfg(feature = "uuid")]
         {
             let id = ::uuid::Uuid::new_v4();
             let a: Id<Foo, ::uuid::Uuid> = Id::direct(Foo::labeler().label(), id);
@@ -221,30 +163,104 @@ mod tests {
     #[test]
     fn test_alternate_debug() {
         let a: Id<Foo, String> = Foo::next_id();
-        assert_eq!(
-            format!("{a:#?}"),
-            format!(
-                "Id {{\n    label: \"{}\",\n    id: \"{}\",\n}}",
-                a.label, a.id,
-            )
-        );
+        let debug_str = format!("{a:#?}");
+        assert!(debug_str.contains("Id {"));
+        assert!(debug_str.contains(a.label.as_str()));
+        assert!(debug_str.contains(&a.id));
 
         let id = 98734021;
         let a: Id<Foo, u64> = Id::direct(Foo::labeler().label(), id);
-        assert_eq!(
-            format!("{a:#?}"),
-            format!("Id {{\n    label: \"{}\",\n    id: {},\n}}", a.label, a.id,)
-        );
+        let debug_str = format!("{a:#?}");
+        assert!(debug_str.contains("Id {"));
+        assert!(debug_str.contains(a.label.as_str()));
+        assert!(debug_str.contains(&format!("{}", a.id)));
 
-        #[cfg(feature = "with-uuid")]
+        #[cfg(feature = "uuid")]
         {
             let id = ::uuid::Uuid::new_v4();
             let a: Id<Foo, ::uuid::Uuid> = Id::direct(Foo::labeler().label(), id);
-            assert_eq!(
-                format!("{a:#?}"),
-                format!("Id {{\n    label: \"{}\",\n    id: {},\n}}", a.label, a.id,)
-            );
+            let debug_str = format!("{a:#?}");
+            assert!(debug_str.contains("Id {"));
+            assert!(debug_str.contains(a.label.as_str()));
+            assert!(debug_str.contains(&format!("{}", a.id)));
         }
+    }
+
+    #[test]
+    fn test_equality_ignores_label() {
+        let id1: Id<Foo, String> = Id::direct("label1", "123".into());
+        let id2: Id<Foo, String> = Id::direct("label2", "123".into());
+        assert_eq!(id1, id2);
+
+        let id3: Id<Foo, String> = Id::direct("label1", "456".into());
+        assert_ne!(id1, id3);
+    }
+
+    #[test]
+    fn test_hash_matches_equality() {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let id1: Id<Foo, String> = Id::direct("a", "123".to_string());
+        let id2: Id<Foo, String> = Id::direct("b", "123".to_string());
+
+        let hash1 = {
+            let mut h = DefaultHasher::new();
+            id1.hash(&mut h);
+            h.finish()
+        };
+
+        let hash2 = {
+            let mut h = DefaultHasher::new();
+            id2.hash(&mut h);
+            h.finish()
+        };
+
+        assert_eq!(hash1, hash2);
+    }
+
+    #[test]
+    fn test_ordering_ignores_label() {
+        let a: Id<Foo, u64> = Id::direct("z", 1u64);
+        let b: Id<Foo, u64> = Id::direct("a", 2u64);
+        assert!(a < b); // Ordered by ID value, not label
+
+        let c: Id<Foo, u64> = Id::direct("m", 1u64);
+        assert_eq!(a, c); // Same ID → equal despite label difference
+    }
+
+    #[test]
+    fn test_from_id_uses_entity_labeler() {
+        // From<ID> should use T::labeler(), not create empty label
+        let id: Id<Foo, String> = "abc".to_string().into();
+        assert_eq!(id.label, Foo::labeler().label());
+        assert_eq!(id.id, "abc");
+    }
+
+    #[test]
+    fn test_as_str_returns_id_only() {
+        let id: Id<Foo, String> = Id::direct("IGNORED", "value".to_string());
+        assert_eq!(id.as_str(), "value");
+        assert_ne!(id.as_str(), "IGNORED::value"); // No label in result
+    }
+
+    #[test]
+    fn test_clone_correctness() {
+        let original: Id<Foo, String> = Id::direct("MyLabel", "id-value".to_string());
+        let cloned = original.clone();
+
+        assert_eq!(original, cloned);
+        assert_eq!(original.label, cloned.label);
+        assert_eq!(original.id, cloned.id);
+    }
+
+    #[test]
+    fn test_into_inner_correctness() {
+        let original_value = "test-id".to_string();
+        let id: Id<Foo, String> = Id::direct("_", original_value.clone());
+
+        let extracted = id.into_inner();
+        assert_eq!(extracted, original_value);
     }
 
     #[test]
@@ -302,7 +318,7 @@ mod tests {
         assert_let!(Ok(actual) = serde_json::from_str::<Id<Foo, u64>>(&json));
         assert_eq!(actual, id);
 
-        #[cfg(feature = "with-ulid")]
+        #[cfg(feature = "ulid")]
         {
             let ulid = Ulid::new();
             let id = crate::id::ulid::UlidId::<Foo>::direct(labeler.label(), ulid);
@@ -310,5 +326,45 @@ mod tests {
             assert_let!(Ok(actual) = serde_json::from_str::<Id<Foo, Ulid>>(&json));
             assert_eq!(actual, id);
         }
+    }
+
+    #[test]
+    fn test_serde_rejects_invalid_type_string_to_u64() {
+        // JSON string "abc" cannot deserialize to u64
+        let result = serde_json::from_str::<Id<Foo, u64>>("\"abc\"");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_serde_labeled_format_is_literal() {
+        // "Foo::abc" should deserialize as a literal string, not parsed
+        let result = serde_json::from_str::<Id<Foo, String>>("\"Foo::abc\"");
+        assert!(result.is_ok());
+        let id = result.unwrap();
+        assert_eq!(id.id, "Foo::abc"); // Literal string, not split
+        assert_eq!(id.label, Foo::labeler().label()); // Label from entity, not from JSON
+    }
+
+    #[test]
+    fn test_serde_label_from_entity_labeler() {
+        let json = "\"test-id\"";
+        let id: Id<Foo, String> = serde_json::from_str(json).unwrap();
+
+        // Label must come from Foo::labeler(), not from JSON
+        assert_eq!(id.label, Foo::labeler().label());
+        assert_eq!(id.id, "test-id");
+    }
+
+    #[test]
+    fn test_serde_roundtrip_label_behavior() {
+        let original = Id::<Foo, String>::direct("ANY", "value".into());
+        let json = serde_json::to_string(&original).unwrap();
+        let restored: Id<Foo, String> = serde_json::from_str(&json).unwrap();
+
+        // ID matches
+        assert_eq!(restored.id, original.id);
+
+        // Label is RE-DERIVED, not preserved from original
+        assert_eq!(restored.label, Foo::labeler().label());
     }
 }

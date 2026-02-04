@@ -194,3 +194,82 @@ impl fmt::Display for NoLabeling {
         write!(f, "")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct Foo;
+    impl Label for Foo {
+        type Labeler = CustomLabeling;
+        fn labeler() -> Self::Labeler {
+            CustomLabeling::new("MyFooferNut")
+        }
+    }
+
+    #[test]
+    fn test_make_labeling_caching() {
+        let labeler = MakeLabeling::<String>::default();
+        let label1 = labeler.label();
+        let label2 = labeler.label();
+
+        // Should return same value (caching works)
+        assert_eq!(label1, label2);
+        assert!(!label1.is_empty());
+    }
+
+    #[test]
+    fn test_make_labeling_display_and_debug() {
+        let labeler = MakeLabeling::<u32>::default();
+        let label = labeler.label();
+
+        assert_eq!(format!("{}", labeler), label);
+        assert!(format!("{:?}", labeler).contains(label));
+    }
+
+    #[test]
+    fn test_custom_labeling_conversions() {
+        let from_str = CustomLabeling::from("test");
+        let from_string = CustomLabeling::from("test".to_string());
+        let from_parse: CustomLabeling = "test".parse().unwrap();
+
+        assert_eq!(from_str.label(), "test");
+        assert_eq!(from_string.label(), "test");
+        assert_eq!(from_parse.label(), "test");
+    }
+
+    #[test]
+    fn test_custom_labeling_display_and_debug() {
+        let labeler = CustomLabeling::new("MyLabel");
+        assert_eq!(format!("{}", labeler), "MyLabel");
+        assert!(format!("{:?}", labeler).contains("MyLabel"));
+    }
+
+    #[test]
+    fn test_no_labeling_returns_empty() {
+        let labeler = NoLabeling;
+        assert_eq!(labeler.label(), "");
+    }
+
+    #[test]
+    fn test_labeling_summon() {
+        // Test the static summon() method
+        let labeler = <dyn Labeling>::summon::<Foo>();
+        assert_eq!(labeler.label(), "MyFooferNut");
+    }
+
+    #[test]
+    fn test_labeling_decorated_default() {
+        let labeler = MakeLabeling::<String>::default();
+        let decorated = labeler.decorated_label();
+        assert_eq!(decorated.as_ref(), labeler.label());
+    }
+
+    #[test]
+    fn test_primitive_labels_not_empty() {
+        assert!(!<u32 as Label>::labeler().label().is_empty());
+        assert!(!<u64 as Label>::labeler().label().is_empty());
+        assert!(!<String as Label>::labeler().label().is_empty());
+        assert!(!<bool as Label>::labeler().label().is_empty());
+    }
+}

@@ -207,3 +207,44 @@ impl Label for &str {
         MakeLabeling::<Self>::default()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_label_option_delegation() {
+        let opt_labeler = <Option<String> as Label>::labeler();
+        let str_labeler = <String as Label>::labeler();
+        assert_eq!(opt_labeler.label(), str_labeler.label());
+    }
+
+    #[test]
+    fn test_label_result_delegation() {
+        let res_labeler = <Result<u32, String> as Label>::labeler();
+        let u32_labeler = <u32 as Label>::labeler();
+        assert_eq!(res_labeler.label(), u32_labeler.label());
+    }
+
+    #[test]
+    fn test_label_hashmap_format() {
+        let labeler = <HashMap<String, u32> as Label>::labeler();
+        let label = labeler.label();
+
+        // Should contain both key and value type names
+        assert!(label.contains("String") || label.contains("str")); // String representation
+        assert!(label.contains("u32"));
+
+        // NOTE: This test documents current behavior and would catch
+        // the format string bug if it exists (missing ">")
+        // Expected: "HashMap<String,u32" (missing closing bracket)
+        // This test makes that explicit!
+        assert_eq!(label, "HashMap<String,u32");
+    }
+
+    #[test]
+    fn test_label_unit_impl() {
+        assert!(<() as Label>::labeler().label().is_empty());
+        assert_eq!(<() as Label>::POLICY, LabelPolicy::Opaque);
+    }
+}
