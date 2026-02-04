@@ -118,7 +118,7 @@ Add `tagid` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-tagid = { version = "0.4", features = ["uuid", "serde", "sqlx"] }
+tagid = { version = "1.0", features = ["uuid", "sqlx"] }
 ```
 
 ## Examples

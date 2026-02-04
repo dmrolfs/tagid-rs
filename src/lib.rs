@@ -14,7 +14,7 @@
 //!   - **Snowflake** (`snowflake` feature) - Time-based, distributed IDs.
 //! - **Entity Labeling**: Labels provide contextual meaning to identifiers.
 //! - **Serialization & Database Support**:
-//!   - [`serde`] integration for JSON and binary serialization (`serde` feature).
+//!   - [`serde`] integration for JSON and binary serialization.
 //!   - [`sqlx`] integration for database storage (`sqlx` feature).
 //! - **Custom Labeling**: Define custom label formats for entities.
 //!
@@ -24,7 +24,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! tagid = { version = "0.1", features = ["uuid", "sqlx"] }
+//! tagid = { version = "1.0", features = ["uuid", "sqlx"] }
 //! ```
 //!
 //! ## Usage
@@ -71,13 +71,12 @@
 //! | `"ulid"`     | Enables the [`UlidGenerator`] for ULID-based IDs.             |
 //! | `"uuid"`     | Enables the [`UuidGenerator`] for UUID-based IDs.             |
 //! | `"snowflake"`| Enables the [`SnowflakeGenerator`] for distributed IDs.       |
-//! | `"serde"`    | Enables serialization support via `serde`.                    |
-//! | `"sqlx"`     | Enables database integration via `sqlx`.                      |
+//! | `"sqlx"`     | Enables database integration via [`sqlx`].                    |
 //! | `"envelope"` | Provides an envelope struct for wrapping IDs with metadata.   |
 //!
 //! ## Contributing
 //!
-//! Contributions are welcome! Open an issue or submit a pull request on [GitHub](https://github.com/your-repo/tagid).
+//! Contributions are welcome! Open an issue or submit a pull request on [GitHub](https://github.com/dmrolfs/tagid-rs).
 //!
 //! ## License
 //!
