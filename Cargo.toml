@@ -23,6 +23,7 @@ cargo = "warn"
 suspicious = "warn"
 
 [workspace]
+members = [".", "tagid-derive"]
 resolver = "2"
 
 [features]
