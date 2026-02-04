@@ -292,4 +292,24 @@ mod tests {
         );
         assert_eq!(provenance_display_name::<Temporary>(), Temporary::SLUG);
     }
+
+    #[test]
+    fn test_external_with_vendor_display() {
+        use super::super::provenance::{External, providers};
+        // Specialized External impls with vendors show slug/vendor format
+        assert_eq!(
+            provenance_display_name::<External<providers::Stripe>>(),
+            "ext/stripe"
+        );
+        assert_eq!(
+            provenance_display_name::<External<providers::Spark>>(),
+            "ext/spark"
+        );
+        assert_eq!(
+            provenance_display_name::<External<providers::Github>>(),
+            "ext/github"
+        );
+        // Generic External<()> has no vendor
+        assert_eq!(provenance_display_name::<External<()>>(), "ext");
+    }
 }

@@ -175,13 +175,76 @@ pub use crate::LabelPolicy;
 #[derive(Debug, Default, Clone, Copy)]
 pub struct External<Provider = ()>(PhantomData<Provider>);
 
-impl<P> Provenance for External<P>
-where
-    P: 'static + Send + Sync + Default + Clone,
-{
+// Generic implementation for External without vendor (catches External<()> and unknown types)
+impl Provenance for External<()> {
     const NAME: &'static str = "external";
     const SLUG: &'static str = "ext";
     const VENDOR: Option<&'static str> = None;
+    const LABEL_POLICY: LabelPolicy = LabelPolicy::ExternalKeyDefault;
+    type Descriptor = ();
+}
+
+// Specialized implementations for providers with vendor information
+impl Provenance for External<providers::Stripe> {
+    const NAME: &'static str = "external";
+    const SLUG: &'static str = "ext";
+    const VENDOR: Option<&'static str> = Some("stripe");
+    const LABEL_POLICY: LabelPolicy = LabelPolicy::ExternalKeyDefault;
+    type Descriptor = ();
+}
+
+impl Provenance for External<providers::Github> {
+    const NAME: &'static str = "external";
+    const SLUG: &'static str = "ext";
+    const VENDOR: Option<&'static str> = Some("github");
+    const LABEL_POLICY: LabelPolicy = LabelPolicy::ExternalKeyDefault;
+    type Descriptor = ();
+}
+
+impl Provenance for External<providers::Spark> {
+    const NAME: &'static str = "external";
+    const SLUG: &'static str = "ext";
+    const VENDOR: Option<&'static str> = Some("spark");
+    const LABEL_POLICY: LabelPolicy = LabelPolicy::ExternalKeyDefault;
+    type Descriptor = ();
+}
+
+impl Provenance for External<providers::Okta> {
+    const NAME: &'static str = "external";
+    const SLUG: &'static str = "ext";
+    const VENDOR: Option<&'static str> = Some("okta");
+    const LABEL_POLICY: LabelPolicy = LabelPolicy::ExternalKeyDefault;
+    type Descriptor = ();
+}
+
+impl Provenance for External<providers::AwsS3> {
+    const NAME: &'static str = "external";
+    const SLUG: &'static str = "ext";
+    const VENDOR: Option<&'static str> = Some("aws-s3");
+    const LABEL_POLICY: LabelPolicy = LabelPolicy::ExternalKeyDefault;
+    type Descriptor = ();
+}
+
+impl Provenance for External<providers::GoogleCloud> {
+    const NAME: &'static str = "external";
+    const SLUG: &'static str = "ext";
+    const VENDOR: Option<&'static str> = Some("google-cloud");
+    const LABEL_POLICY: LabelPolicy = LabelPolicy::ExternalKeyDefault;
+    type Descriptor = ();
+}
+
+impl Provenance for External<providers::Iceberg> {
+    const NAME: &'static str = "external";
+    const SLUG: &'static str = "ext";
+    const VENDOR: Option<&'static str> = Some("iceberg");
+    const LABEL_POLICY: LabelPolicy = LabelPolicy::ExternalKeyDefault;
+    type Descriptor = ();
+}
+
+impl Provenance for External<providers::Nessie> {
+    const NAME: &'static str = "external";
+    const SLUG: &'static str = "ext";
+    const VENDOR: Option<&'static str> = Some("nessie");
     const LABEL_POLICY: LabelPolicy = LabelPolicy::ExternalKeyDefault;
     type Descriptor = ();
 }
@@ -668,9 +731,9 @@ mod tests {
     fn test_labeling_output_by_policy() {
         // 1. External (ExternalKeyDefault -> Full)
         let stripe_id = StripeId::for_labeled("cus_123".to_string());
-        // Default .labeled() should be Full: Entity@provenance::value
-        // Note: Now using slug format ("ext") instead of name format ("external")
-        assert_eq!(stripe_id.labeled().to_string(), "Customer@ext::cus_123");
+        // Default .labeled() should be Full: Entity@slug/vendor::value
+        // Stripe provider includes vendor in slug display
+        assert_eq!(stripe_id.labeled().to_string(), "Customer@ext/stripe::cus_123");
 
         // 2. Generated (EntityNameDefault -> Short)
         let user_id = UserId::direct("User", "user-123".to_string());

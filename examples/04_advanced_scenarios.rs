@@ -11,10 +11,8 @@
 //! 5. **LabelPolicy Bridge**: Automatic sensible defaults for logs.
 //! 6. **Metadata Separation**: Using `WithProvenance` for auxiliary data.
 
-use tagid::id::provenance::{
-    External, Generated, Imported, Temporary, WithProvenance, providers, strategies,
-};
-use tagid::{Entity, Id, Label, LabelMode, Sourced};
+use tagid::id::provenance::{External, Imported, Temporary, WithProvenance, providers};
+use tagid::{Id, Label, Sourced};
 
 // ============================================================================
 // ENTITY DEFINITIONS
@@ -143,7 +141,10 @@ fn main() {
 
     // We get provenance info in logs (Axis 5), opaque preservation (Axis 2),
     // and type safety (Axis 4).
-    println!("  Log Entry:   Processing order {}", legacy_order.labeled());
+    println!(
+        "  Log Entry:   Processing order {legacy_order:?}, labeled order: {}",
+        legacy_order.labeled()
+    );
     // Output: Order@imported::98765
 
     println!("\nSummary: All 6 axes ensure that IDs are semantically rich in code");

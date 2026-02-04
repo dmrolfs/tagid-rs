@@ -11,9 +11,7 @@
 //! 4. Explicit overrides via `.labeled().mode(...)`.
 //! 5. Broad Provenance taxonomy (8 core types).
 
-use tagid::id::provenance::{
-    AliasOf, Derived, External, Generated, Imported, Scoped, Temporary, providers,
-};
+use tagid::id::provenance::{AliasOf, External, Generated, Imported, Scoped, Temporary, providers};
 use tagid::{Entity, Id, IdGenerator, Label, LabelMode, MakeLabeling, Sourced};
 
 // ============================================================================
@@ -102,9 +100,9 @@ fn main() {
     println!("  Generated:  {}", user_id.labeled());
     // Output: User::018d6f-7b2a
 
-    // External -> ExternalKeyDefault (Show Entity + Provenance)
+    // External -> ExternalKeyDefault (Show Entity + Provenance slug/vendor)
     println!("  External:   {}", stripe_id.labeled());
-    // Output: Customer@external::cus_L3H8Z6
+    // Output: Customer@ext/stripe::cus_L3H8Z6
 
     // Temporary -> OpaqueByDefault (Show value only)
     let session = SessionId::for_labeled("sess_123".to_string());
@@ -123,17 +121,43 @@ fn main() {
     println!("\nExplicit Overrides:");
 
     // Force "Full" mode even for internal IDs
+    println!("      Policy:  {}", user_id.labeled());
     println!("  Force Full:  {}", user_id.labeled().mode(LabelMode::Full));
+    println!(
+        " Force Short:  {}",
+        user_id.labeled().mode(LabelMode::Short)
+    );
+    println!("  Force None:  {}", user_id.labeled().mode(LabelMode::None));
     // Output: User@generated::018d6f-7b2a
 
-    // Force "Short" mode for external IDs (hiding the @external part)
+    // Force "Short" mode for external IDs (hiding the provenance part)
+    println!();
+    println!("      Policy: {}", stripe_id.labeled());
     println!(
-        "  Force Short: {}",
+        "  Force Full: {}",
+        stripe_id.labeled().mode(LabelMode::Full)
+    );
+    println!(
+        " Force Short: {}",
         stripe_id.labeled().mode(LabelMode::Short)
+    );
+    println!(
+        "  Force None:  {}",
+        stripe_id.labeled().mode(LabelMode::None)
     );
     // Output: Customer::cus_L3H8Z6
 
     // Force "None" (Canonical)
+    println!();
+    println!("      Policy:  {}", legacy_id.labeled());
+    println!(
+        "  Force Full:  {}",
+        legacy_id.labeled().mode(LabelMode::Full)
+    );
+    println!(
+        " Force Short:  {}",
+        legacy_id.labeled().mode(LabelMode::Short)
+    );
     println!(
         "  Force None:  {}",
         legacy_id.labeled().mode(LabelMode::None)
@@ -149,6 +173,6 @@ fn main() {
 
     // Note: Scoped IDs maintain their atomic canonical value
     let issue = RepoIssueId::for_labeled(42);
-    println!("  Scoped:      {}", issue.labeled());
+    println!("  Scoped labeled:      {}", issue.labeled());
     // Output: User@scoped::42 (where 42 is the canonical ID)
 }

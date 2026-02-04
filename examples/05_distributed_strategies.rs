@@ -8,7 +8,7 @@
 //! characteristics.
 
 use tagid::id::provenance::{Generated, strategies};
-use tagid::{Entity, Id, Label, LabelMode, Sourced};
+use tagid::{Entity, Id, Label, Sourced};
 
 // ============================================================================
 // ENTITY DEFINITIONS
@@ -17,9 +17,11 @@ use tagid::{Entity, Id, Label, LabelMode, Sourced};
 #[derive(Label)]
 struct Session;
 
+#[allow(dead_code)]
 #[derive(Label)]
 struct LogEntry;
 
+#[allow(dead_code)]
 #[derive(Label)]
 struct DistributedNode;
 

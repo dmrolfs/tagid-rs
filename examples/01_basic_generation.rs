@@ -3,10 +3,10 @@
 //! This example shows how to use `Generated` provenance for IDs created
 //! internally by your application.
 
-use tagid::id::provenance::{Generated, strategies};
-use tagid::{Entity, Id, Label, MakeLabeling, Sourced};
+use tagid::{Label, MakeLabeling};
 
 // Define an entity type.
+#[allow(dead_code)]
 struct User;
 
 impl Label for User {
