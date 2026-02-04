@@ -1,3 +1,4 @@
+use super::labeled::Labeled;
 use crate::{DELIMITER, Entity, IdGenerator, Label, Labeling};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -122,6 +123,13 @@ impl<T: ?Sized, ID> Id<T, ID> {
     }
 }
 
+impl<T: ?Sized, ID: AsRef<str>> Id<T, ID> {
+    /// Returns the canonical ID value as a string slice.
+    pub fn as_str(&self) -> &str {
+        self.id.as_ref()
+    }
+}
+
 impl<T: ?Sized, ID: Clone> Id<T, ID> {
     /// Converts the `Id` to another entity type while retaining the same ID value.
     pub fn relabel<B: Label>(&self) -> Id<B, ID> {
@@ -161,11 +169,7 @@ impl<T: ?Sized, ID: fmt::Debug> fmt::Debug for Id<T, ID> {
 
 impl<T: ?Sized, ID: fmt::Display> fmt::Display for Id<T, ID> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if f.alternate() || self.label.is_empty() {
-            write!(f, "{}", self.id)
-        } else {
-            write!(f, "{}{DELIMITER}{}", self.label, self.id)
-        }
+        write!(f, "{}", self.id)
     }
 }
 
@@ -216,6 +220,21 @@ where
         let rep = ID::deserialize(deserializer)?;
         let labeler = <T as Label>::labeler();
         Ok(Self::direct(labeler.label(), rep))
+    }
+}
+
+impl<T: ?Sized + Label, ID> Id<T, ID> {
+    /// Returns a wrapper that formats this ID for human-readable output.
+    ///
+    /// The default formatting mode is determined by `T::POLICY`.
+    /// You can override the mode using the builder pattern:
+    ///
+    /// ```ignore
+    /// println!("{}", id.labeled()); // Uses default policy
+    /// println!("{}", id.labeled().mode(LabelMode::Full)); // Forces Full mode
+    /// ```
+    pub fn labeled(&self) -> Labeled<'_, T, ID> {
+        Labeled::new(self, T::POLICY.into())
     }
 }
 

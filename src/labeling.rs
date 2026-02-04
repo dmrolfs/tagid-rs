@@ -17,6 +17,7 @@ use crate::Label;
 use once_cell::sync::OnceCell;
 use pretty_type_name::pretty_type_name;
 use smol_str::SmolStr;
+use std::borrow::Cow;
 use std::convert::Infallible;
 use std::fmt;
 use std::marker::PhantomData;
@@ -37,6 +38,12 @@ use std::str::FromStr;
 pub trait Labeling {
     /// Returns the label associated with the type.
     fn label(&self) -> &str;
+
+    /// Returns a decorated version of the label (e.g. including provenance).
+    /// Defaults to returning the same as `label()`.
+    fn decorated_label(&self) -> Cow<'_, str> {
+        Cow::Borrowed(self.label())
+    }
 }
 
 impl dyn Labeling {

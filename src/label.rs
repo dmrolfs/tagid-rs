@@ -16,6 +16,75 @@
 use crate::{CustomLabeling, Labeling, MakeLabeling, NoLabeling};
 use std::collections::HashMap;
 
+/// Controls how IDs are displayed to humans (via `.labeled()`).
+///
+/// # Scope
+///
+/// This enum affects **only** human-facing output. It does **NOT** affect:
+/// - Display/to_string() → always canonical
+/// - Serialize/serde → always canonical
+/// - Database storage → always canonical
+/// - ID construction → no complexity added
+/// - Equality/hashing → based on canonical ID only
+///
+/// # Usage
+///
+/// Specified on the `Label` trait (and delegated from `Provenance`) as `POLICY` constant.
+/// Controls the default behavior of `.labeled()` when called with no arguments.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LabelPolicy {
+    /// No preference; defaults to canonical output but encourages explicit mode selection.
+    ///
+    /// Used when the provenance doesn't have a strong default preference.
+    ///
+    /// **Output Scenarios:**
+    /// - `id.to_string()`: `"value"` (Canonical)
+    /// - `id.labeled().to_string()`: `"value"` (Default = None)
+    /// - `id.labeled().mode(LabelMode::None).to_string()`: `"value"`
+    /// - `id.labeled().mode(LabelMode::Short).to_string()`: `"Entity::value"`
+    /// - `id.labeled().mode(LabelMode::Full).to_string()`: `"Entity@prov::value"`
+    Opaque,
+
+    /// Default to showing the entity type name in human output.
+    ///
+    /// Used for internal origins (Generated, Derived) where the entity type
+    /// provides sufficient context without needing to show provenance details.
+    ///
+    /// **Output Scenarios:**
+    /// - `id.to_string()`: `"value"` (Canonical)
+    /// - `id.labeled().to_string()`: `"Entity::value"` (Default = Short)
+    /// - `id.labeled().mode(LabelMode::None).to_string()`: `"value"`
+    /// - `id.labeled().mode(LabelMode::Short).to_string()`: `"Entity::value"`
+    /// - `id.labeled().mode(LabelMode::Full).to_string()`: `"Entity@prov::value"`
+    EntityNameDefault,
+
+    /// Default to showing both entity and provenance in human output.
+    ///
+    /// Used for external origins (External, Imported) where knowing the source system
+    /// is critical for understanding and identifying the ID.
+    ///
+    /// **Output Scenarios:**
+    /// - `id.to_string()`: `"value"` (Canonical)
+    /// - `id.labeled().to_string()`: `"Entity@prov::value"` (Default = Full)
+    /// - `id.labeled().mode(LabelMode::None).to_string()`: `"value"`
+    /// - `id.labeled().mode(LabelMode::Short).to_string()`: `"Entity::value"`
+    /// - `id.labeled().mode(LabelMode::Full).to_string()`: `"Entity@prov::value"`
+    ExternalKeyDefault,
+
+    /// Hide all labels by default; only show on explicit request.
+    ///
+    /// Used for sensitive or transient sources (Temporary, ClientProvided) where the ID
+    /// itself might be sensitive and context shouldn't leak in logs unless necessary.
+    ///
+    /// **Output Scenarios:**
+    /// - `id.to_string()`: `"value"` (Canonical)
+    /// - `id.labeled().to_string()`: `"value"` (Default = None)
+    /// - `id.labeled().mode(LabelMode::None).to_string()`: `"value"`
+    /// - `id.labeled().mode(LabelMode::Short).to_string()`: `"Entity::value"`
+    /// - `id.labeled().mode(LabelMode::Full).to_string()`: `"Entity@prov::value"`
+    OpaqueByDefault,
+}
+
 /// Trait for types that can provide a labeling mechanism.
 ///
 /// Types implementing `Label` define a corresponding `Labeler` type that
@@ -38,6 +107,9 @@ use std::collections::HashMap;
 pub trait Label {
     type Labeler: Labeling;
 
+    /// The default labeling policy for this type.
+    const POLICY: LabelPolicy = LabelPolicy::EntityNameDefault;
+
     /// Returns an instance of the labeler for the type.
     fn labeler() -> Self::Labeler;
 }
@@ -45,6 +117,7 @@ pub trait Label {
 /// Implementation for the unit type `()`, which has no labeling.
 impl Label for () {
     type Labeler = NoLabeling;
+    const POLICY: LabelPolicy = LabelPolicy::Opaque;
 
     fn labeler() -> Self::Labeler {
         NoLabeling
@@ -54,6 +127,7 @@ impl Label for () {
 /// Implementation for `Option<T>`, using the same labeling as `T`.
 impl<T: Label> Label for Option<T> {
     type Labeler = <T as Label>::Labeler;
+    const POLICY: LabelPolicy = T::POLICY;
 
     fn labeler() -> Self::Labeler {
         <T as Label>::labeler()
@@ -63,6 +137,7 @@ impl<T: Label> Label for Option<T> {
 /// Implementation for `Result<T, E>`, using the same labeling as `T`.
 impl<T: Label, E> Label for Result<T, E> {
     type Labeler = <T as Label>::Labeler;
+    const POLICY: LabelPolicy = T::POLICY;
 
     fn labeler() -> Self::Labeler {
         <T as Label>::labeler()

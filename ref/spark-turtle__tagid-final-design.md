@@ -1,13 +1,13 @@
 ---
 Source: spark-turtle/history/phase3-ids-final-design-v2.md
-Commit: (from design session 2026-02-03)
+Commit: (from update session 2026-02-03)
 Date: 2026-02-03
-Notes: Core spec extracted for tagid-rs context; removed spark-turtle-specific examples; kept generalized patterns for icehouse/future projects
+Notes: Core spec extracted for tagid-rs context; removed spark-turtle-specific examples; kept generalized patterns for icehouse/future projects. Updated with Feb 3 Clarifications (LabelPolicy, Opaque IDs).
 ---
 
 # tagid Enhancement Specification: Provenance & Sourced Semantics
 
-**Status**: Final Design ✅ | Ready for Implementation  
+**Status**: Final Design v3 ✅ | Ready for Implementation  
 **Scope**: tagid-rs core library (no breaking changes to existing APIs)  
 **Effort**: 7-9 hours total (5h core, 2-4h docs/integration)
 
@@ -60,7 +60,7 @@ pub type GenericId = Id<Sourced<Entity, External>, String>;  // Works with defau
 - Enables rich semantics without forcing complexity
 - Projects can specialize later (External → External<Stripe>)
 
-### 3. Canonical ID: Always Label-Free
+### 3. Canonical ID: Always Label-Free & Opaque
 
 **Rules**:
 - `Serialize` (JSON) → canonical only (no labels)
@@ -70,13 +70,19 @@ pub type GenericId = Id<Sourced<Entity, External>, String>;  // Works with defau
 - `.as_str()` → canonical only
 - `.labeled(mode)` → opt-in labeling
 
+**Clarification (Feb 3)**: **External IDs are OPAQUE**.
+- If Stripe provides `"cus_L3H8Z6K9j2"`, the canonical ID is `"cus_L3H8Z6K9j2"`.
+- Do **NOT** strip prefixes (e.g., `cus_`).
+- Do **NOT** parse or transform the ID at the application boundary.
+- The entire value provided by the external system is the canonical ID.
+
 **Why**:
 - Prevents subtle bugs (serde surprises, failed DB queries)
 - Canonical ID = stable value
 - Labeling = human presentation only
 - Clear rules remove confusion
 
-### 4. Labeling: Explicit & Opt-In
+### 4. Labeling: Explicit & Opt-In (LabelPolicy)
 
 **Design**:
 ```rust
@@ -88,8 +94,17 @@ pub enum LabelMode {
 
 // Usage
 println!("{}", id.labeled(LabelMode::Full));
-tracing::info!("Processed {}", app_id.labeled(LabelMode::Short));
+tracing::info!("Processed {}", app_id.labeled()); // Uses default from LabelPolicy
 ```
+
+**Clarification (Feb 3): LabelPolicy Scope**
+`LabelPolicy` is a constant on the `Provenance` trait that controls the **default** behavior of `.labeled()` when called without arguments.
+- It does **NOT** affect Display, Serialize, or database storage.
+- **Variants**:
+    - `Opaque`: Caller must specify mode.
+    - `EntityNameDefault`: Default to `Short`.
+    - `ExternalKeyDefault`: Default to `Full`.
+    - `OpaqueByDefault`: Default to `None`.
 
 **Why**:
 - Explicit (intentional, no surprises)
@@ -119,6 +134,8 @@ pub struct WithProvenance<E, P: Provenance> {
 
 ### 1. External<Provider = ()>
 ID provided by external system. Cannot be generated; must be from_source.
+**Policy**: `ExternalKeyDefault` (Show provenance by default).
+**Opaqueness**: Strictly opaque. No prefix stripping.
 
 **Examples**:
 - `External<Spark>` - Spark application/job IDs
@@ -128,6 +145,7 @@ ID provided by external system. Cannot be generated; must be from_source.
 
 ### 2. Generated<Strategy = ()>
 ID created internally. Can only be generated via generate().
+**Policy**: `EntityNameDefault` (Show entity name by default).
 
 **Examples**:
 - `Generated<UuidV7>` - UUID v7 strategy
@@ -136,6 +154,7 @@ ID created internally. Can only be generated via generate().
 
 ### 3. Imported<From>
 ID brought in from migration/backfill. Has source system.
+**Policy**: `ExternalKeyDefault`.
 
 **Examples**:
 - `Imported<LegacyDatabase>`
@@ -143,6 +162,7 @@ ID brought in from migration/backfill. Has source system.
 
 ### 4. Derived<Method>
 ID computed/derived from other data.
+**Policy**: `EntityNameDefault`.
 
 **Examples**:
 - `Derived<Slugify>` - slug from name
@@ -150,6 +170,7 @@ ID computed/derived from other data.
 
 ### 5. Scoped<Scope, Inner: Provenance>
 Uniqueness depends on context.
+**Policy**: Inherits from `Inner`.
 
 **Examples**:
 - `Scoped<TenantId, Generated<UuidV7>>` - tenant-scoped UUID
@@ -157,47 +178,15 @@ Uniqueness depends on context.
 
 ### 6. Temporary
 Valid only short-term (optimistic IDs, session tokens).
+**Policy**: `OpaqueByDefault`.
 
 ### 7. ClientProvided
 User/client supplies the ID (idempotency keys, BYO primary key).
+**Policy**: `OpaqueByDefault`.
 
 ### 8. AliasOf<Canonical>
 Secondary identifier (email as alias for user).
-
----
-
-## Provider Markers (ZST)
-
-Marker types to parameterize External<Provider>:
-
-```rust
-pub struct Spark;        // Spark system
-pub struct Stripe;       // Stripe payments
-pub struct Github;       // Github platform
-pub struct Okta;         // Okta identity
-pub struct AwsS3;        // AWS S3
-pub struct GoogleCloud;  // Google Cloud
-// ... add as needed
-```
-
-These are zero-sized types (PhantomData), purely for compile-time type safety.
-
----
-
-## Strategy Markers (ZST)
-
-Marker types to parameterize Generated<Strategy>:
-
-```rust
-pub struct UuidV4;       // UUID version 4
-pub struct UuidV7;       // UUID version 7 (time-based)
-pub struct Cuid;         // CUID generation
-pub struct Cuid2;        // CUID v2
-pub struct Snowflake;    // Snowflake ID
-pub struct Nanoid;       // Nano ID
-pub struct Hashids;      // Hash-based IDs
-// ... add as needed
-```
+**Policy**: `EntityNameDefault`.
 
 ---
 
@@ -208,21 +197,24 @@ pub trait Provenance: Default + Clone {
     /// Name of this provenance (for display/logging)
     const NAME: &'static str;
     
+    /// Default labeling policy for human-facing output (.labeled())
+    const LABEL_POLICY: LabelPolicy;
+
     /// Optional descriptor type for this provenance
     type Descriptor: Default + Clone;
 }
 
 impl Provenance for External<P> {
     const NAME: &'static str = "external";
-    type Descriptor = ();  // No metadata by default
+    const LABEL_POLICY: LabelPolicy = LabelPolicy::ExternalKeyDefault;
+    type Descriptor = ();
 }
 
 impl Provenance for Generated<S> {
     const NAME: &'static str = "generated";
-    type Descriptor = ();  // No metadata by default
+    const LABEL_POLICY: LabelPolicy = LabelPolicy::EntityNameDefault;
+    type Descriptor = ();
 }
-
-// And so on for other 6 types...
 ```
 
 ---
@@ -254,59 +246,6 @@ impl<E: Label + Entity> Entity for Sourced<E, Generated> {
 
 ---
 
-## Real-World Usage: spark-turtle
-
-### Pattern 1: External IDs from Spark
-
-```rust
-// spark-turtle/src/domain/ids.rs
-pub type AppId = Id<Sourced<AppLabel, External<Spark>>, String>;
-pub type JobId = Id<Sourced<JobLabel, External<Spark>>, String>;
-
-// In mcp_client.rs, parsing from MCP response
-let app_id = AppId::from_source("app-20231215-001");
-
-// Serialization (canonical only, no labels)
-let json = serde_json::to_string(&app_id)?;  // "app-20231215-001"
-
-// Logging with labels
-tracing::info!("Processing {}", app_id.labeled(LabelMode::Full));
-// Output: Processing AppLabel@external/spark::app-20231215-001
-```
-
-### Pattern 2: Turtle-Generated IDs
-
-```rust
-pub type StageId = Id<Sourced<StageLabel, Generated<UuidV7>>, String>;
-pub type TaskId = Id<Sourced<TaskLabel, Generated<UuidV7>>, String>;
-
-// Generation (type-safe, can't do StageId::generate() if using External)
-let stage_id = StageId::generate();  // UuidV7 under the hood
-
-// Type-safe semantics
-let external_app: Id<Sourced<AppLabel, External<Spark>>, String> = ...;
-// external_app.generate()  // COMPILE ERROR - can't generate External IDs!
-```
-
----
-
-## Real-World Usage: icehouse (future)
-
-```rust
-// Multi-provider SaaS
-pub type StripeCustomerId = Id<Sourced<Customer, External<Stripe>>, String>;
-pub type GithubUserId = Id<Sourced<User, External<Github>>, String>;
-pub type OktaUserId = Id<Sourced<User, External<Okta>>, String>;
-
-// Internal generation
-pub type InternalUserId = Id<Sourced<User, Generated<UuidV7>>, String>;
-
-// Tenant-scoped resources
-pub type TenantResourceId<R> = Id<Sourced<R, Scoped<TenantId, Generated<UuidV7>>>, String>;
-```
-
----
-
 ## Serialization Contract
 
 **CRITICAL: Canonical format only, no labels**
@@ -325,120 +264,17 @@ println!("{}", id);  // "app-123"
 println!("{}", id.labeled(LabelMode::Full));  // "AppLabel@external/spark::app-123"
 ```
 
-**Database integration**:
-```rust
-// sqlx encode/decode uses canonical only
-let query = "SELECT * FROM apps WHERE id = ?";
-sqlx::query(query)
-    .bind(app_id.as_str())  // Always canonical
-    .execute(db)
-    .await?;
-```
-
 ---
 
-## Type Safety Benefits
+## Feb 3 Design Clarifications Summary
 
-**Compile-time protection**:
+This section documents the specific updates integrated into this design on 2026-02-03.
 
-```rust
-pub type ExternalAppId = Id<Sourced<AppLabel, External<Spark>>, String>;
-pub type GeneratedStageId = Id<Sourced<StageLabel, Generated<UuidV7>>, String>;
+1.  **LabelPolicy Scope**: 
+    - Clarified that `LabelPolicy` *only* affects the default behavior of `.labeled()` when called without arguments. 
+    - It does not influence the canonical ID, serialization, or database storage.
 
-// This works ✅
-let stage_id = GeneratedStageId::generate();
-
-// This FAILS at compile time ❌
-let app_id: ExternalAppId = ExternalAppId::generate();  // ERROR: no Entity impl
-
-// This FAILS at compile time ❌
-let wrong: ExternalAppId = GeneratedStageId::generate();  // ERROR: type mismatch
-```
-
----
-
-## Backward Compatibility
-
-**Existing code continues to work**:
-
-```rust
-// Old style (still works)
-pub type AppId = Id<Entity, String>;
-let id = AppId::from_string("app-123");
-
-// New style (opt-in)
-pub type AppId = Id<Sourced<AppLabel, External<Spark>>, String>;
-let id = AppId::from_source("app-123");
-
-// Aliases for transition
-pub use Provenance as Source;
-pub type Sourced<E, S> = Provenanced<E, S>;  // Old name still works
-```
-
-**Serialization format unchanged**:
-- Old JSON: `"app-123"`
-- New JSON: `"app-123"` (same!)
-- No migration needed
-
----
-
-## Effort Breakdown
-
-| Task | Duration | Notes |
-|------|----------|-------|
-| 1. Provenance trait + 8 types | 1h | Core foundation |
-| 2. Sourced<E, S> wrapper | 0.5h | Label impl + Entity (Generated only) |
-| 3. Type parameters | 0.5h | External<P>, Generated<S> with defaults |
-| 4. Labeled wrapper + LabelMode | 1h | Display/Debug rules |
-| 5. Canonical ID rules (serde/sqlx) | 1h | Verification + tests |
-| 6. Test suite | 1h | Unit + integration tests |
-| 7. Port docs to ref/ | 0.75h | This document + others |
-| 8. Update README + examples | 1h | Usage guide |
-| 9. Release preparation | 0.5h | Version, tag, publish |
-| **Total** | **7.75h** | |
-
----
-
-## Success Criteria
-
-✅ All code compiles with zero warnings  
-✅ All tests pass (no regressions)  
-✅ Backward compatible (old APIs still work)  
-✅ Type-safe (External can't generate, Generated can't be from_source)  
-✅ Serialization verified (canonical only)  
-✅ Documentation complete (README + examples + rustdoc)  
-✅ spark-turtle can integrate cleanly  
-✅ icehouse patterns enabled (but not blocking)
-
----
-
-## FAQ
-
-**Q: Why not call it Source instead of Provenance?**  
-A: "Provenance" is more accurate (covers 8 types, not just "source"), and matches database terminology.
-
-**Q: What if I want simple External IDs without type parameters?**  
-A: Use `External` (bare) with unit default. Zero overhead, same pattern.
-
-**Q: Will serialization break existing code?**  
-A: No. Format unchanged (canonical only). Old and new code can interoperate.
-
-**Q: Can I mix External and Generated in the same collection?**  
-A: Not without a wrapper. This is intentional (type safety). Use enum if needed:
-```rust
-pub enum AnyId {
-    App(ExternalAppId),
-    Stage(GeneratedStageId),
-}
-```
-
-**Q: What about database constraints (unique, primary key)?**  
-A: Use `id.as_str()` (canonical) for all DB operations. Labeling is only for logging.
-
----
-
-## References
-
-- **spark-turtle DEPENDENCIES.md**: Cross-project dependency tracking
-- **Beads**: Implementation tasks (tid-abl epic in tagid-rs)
-- **Code**: `src/id/source.rs`, `src/id/sourced.rs`, `src/id/mod.rs`
+2.  **External ID Opaqueness**: 
+    - Clarified that IDs from external sources (e.g., Stripe, Spark) are treated as opaque strings.
+    - No parsing, stripping, or transformation of prefixes (e.g., "cus_", "app-") is performed. 
+    - The raw string IS the canonical ID.

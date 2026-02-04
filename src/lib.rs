@@ -99,7 +99,7 @@ pub mod envelope;
 mod id;
 
 pub use id::{Entity, Id, IdGenerator};
-pub use label::Label;
+pub use label::{Label, LabelPolicy};
 pub use labeling::{CustomLabeling, Labeling, MakeLabeling, NoLabeling};
 
 #[cfg(feature = "with-cuid")]

@@ -33,6 +33,7 @@
 //! let id = UserId::generate();  // Only works because S = Generated<_>
 //! ```
 
+use std::borrow::Cow;
 use std::marker::PhantomData;
 
 use crate::{Entity, Label, Labeling};
@@ -188,10 +189,15 @@ impl<L: Labeling, S: Provenance> Labeling for SourceLabeler<L, S> {
     fn label(&self) -> &str {
         self.entity_labeler.label()
     }
+
+    fn decorated_label(&self) -> Cow<'_, str> {
+        Cow::Owned(self.decorated_label())
+    }
 }
 
 impl<E: ?Sized + Label, S: Provenance> Label for Sourced<E, S> {
     type Labeler = SourceLabeler<E::Labeler, S>;
+    const POLICY: crate::LabelPolicy = S::LABEL_POLICY;
 
     fn labeler() -> Self::Labeler {
         SourceLabeler::new(E::labeler())
@@ -226,6 +232,7 @@ fn provenance_display_name<S: Provenance>() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     // Mock types for testing
     struct TestEntity;
@@ -240,7 +247,10 @@ mod tests {
     #[test]
     fn test_sourced_is_zero_sized() {
         use std::mem::size_of;
-        assert_eq!(size_of::<Sourced<TestEntity, super::super::provenance::Generated<()>>>(), 0);
+        assert_eq!(
+            size_of::<Sourced<TestEntity, super::super::provenance::Generated<()>>>(),
+            0
+        );
     }
 
     #[test]

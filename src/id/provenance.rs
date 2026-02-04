@@ -95,69 +95,7 @@ pub trait Provenance: 'static + Send + Sync + Default + Clone {
     type Descriptor: Default + Clone + Send + Sync + 'static;
 }
 
-/// Controls how IDs are displayed to humans (via `.labeled()`).
-///
-/// # Scope
-///
-/// This enum affects **only** human-facing output. It does **NOT** affect:
-/// - Display/to_string() → always canonical
-/// - Serialize/serde → always canonical
-/// - Database storage → always canonical
-/// - ID construction → no complexity added
-/// - Equality/hashing → based on canonical ID only
-///
-/// # Usage
-///
-/// Specified on the `Provenance` trait as `LABEL_POLICY` constant.
-/// Controls the default behavior of `.labeled()` when called with no arguments.
-///
-/// # Examples
-///
-/// ```ignore
-/// // External<Stripe> has LabelPolicy::ExternalKeyDefault
-/// let stripe_id = StripeCustomerId::new("cus_L3H8Z6K9j2");
-/// stripe_id.labeled()  // Shows provenance by default
-/// // Output: Customer@ext/stripe::cus_L3H8Z6K9j2
-///
-/// // Generated<UuidV7> has LabelPolicy::EntityNameDefault
-/// let user_id = UserId::generate();
-/// user_id.labeled()  // Shows entity name by default
-/// // Output: User::550e8400-...
-/// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LabelPolicy {
-    /// No preference; caller controls labeling via `.labeled(mode)`.
-    ///
-    /// Used when the provenance doesn't have a strong preference.
-    /// Caller must explicitly specify mode or use `.labeled(LabelMode::Full)`.
-    Opaque,
-
-    /// Default to showing entity type name in human output.
-    ///
-    /// Used for internal origins (Generated, Derived) where the entity type
-    /// provides sufficient context without showing provenance.
-    ///
-    /// Default output: `Entity::value`
-    /// With explicit Full: `Entity@provenance::value`
-    EntityNameDefault,
-
-    /// Default to showing entity and provenance in human output.
-    ///
-    /// Used for external origins (External, Imported) where knowing the source
-    /// is important for understanding the ID.
-    ///
-    /// Default output: `Entity@provenance::value`
-    ExternalKeyDefault,
-
-    /// Hide by default; only show on explicit request.
-    ///
-    /// Used for sensitive sources (Temporary, ClientProvided) where the ID
-    /// itself might be sensitive and context shouldn't leak in logs.
-    ///
-    /// Default output: `value` (canonical only)
-    /// With explicit Full: `Entity@provenance::value`
-    OpaqueByDefault,
-}
+pub use crate::LabelPolicy;
 
 /// External provenance: ID provided by an external system.
 ///
@@ -427,8 +365,6 @@ where
 
 /// Provider markers for External<Provider>
 pub mod providers {
-    //! Common provider markers for use with External<Provider>.
-
     /// Stripe payment platform
     #[allow(dead_code)]
     #[derive(Debug, Default, Clone, Copy)]
@@ -472,8 +408,6 @@ pub mod providers {
 
 /// Strategy markers for Generated<Strategy>
 pub mod strategies {
-    //! Common strategy markers for use with Generated<Strategy>.
-
     /// UUID version 4 (random)
     #[allow(dead_code)]
     #[derive(Debug, Default, Clone, Copy)]
@@ -518,7 +452,44 @@ pub mod strategies {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::id::sourced::Sourced;
+    use crate::{Entity, Id, IdGenerator, Label, MakeLabeling};
     use pretty_assertions::assert_eq;
+
+    // --- Mock Entities for Extended Tests ---
+
+    struct MockGenerator;
+    impl IdGenerator for MockGenerator {
+        type IdType = String;
+        fn next_id_rep() -> Self::IdType {
+            "mock-id".to_string()
+        }
+    }
+
+    struct User;
+    impl Label for User {
+        type Labeler = MakeLabeling<Self>;
+        fn labeler() -> Self::Labeler {
+            MakeLabeling::default()
+        }
+    }
+    impl Entity for User {
+        type IdGen = MockGenerator;
+    }
+
+    struct Customer;
+    impl Label for Customer {
+        type Labeler = MakeLabeling<Self>;
+        fn labeler() -> Self::Labeler {
+            MakeLabeling::default()
+        }
+    }
+
+    // --- Type Aliases for Extended Testing ---
+
+    type UserId = Id<Sourced<User, Generated<strategies::UuidV7>>, String>;
+    type StripeId = Id<Sourced<Customer, External<providers::Stripe>>, String>;
+    type TempId = Id<Sourced<User, Temporary>, String>;
 
     #[test]
     fn test_provenance_trait_implemented() {
@@ -550,15 +521,93 @@ mod tests {
 
     #[test]
     fn test_label_policies() {
-        assert_eq!(External::<()>::LABEL_POLICY, LabelPolicy::ExternalKeyDefault);
-        assert_eq!(Generated::<()>::LABEL_POLICY, LabelPolicy::EntityNameDefault);
-        assert_eq!(Imported::<()>::LABEL_POLICY, LabelPolicy::ExternalKeyDefault);
+        assert_eq!(
+            External::<()>::LABEL_POLICY,
+            LabelPolicy::ExternalKeyDefault
+        );
+        assert_eq!(
+            Generated::<()>::LABEL_POLICY,
+            LabelPolicy::EntityNameDefault
+        );
+        assert_eq!(
+            Imported::<()>::LABEL_POLICY,
+            LabelPolicy::ExternalKeyDefault
+        );
         assert_eq!(Derived::<()>::LABEL_POLICY, LabelPolicy::EntityNameDefault);
         assert_eq!(Temporary::LABEL_POLICY, LabelPolicy::OpaqueByDefault);
+        assert_eq!(ClientProvided::LABEL_POLICY, LabelPolicy::OpaqueByDefault);
+    }
+
+    #[test]
+    fn test_canonical_id_is_opaque() {
+        // Stripe ID example from design docs
+        let id_str = "cus_L3H8Z6K9j2";
+        let id = StripeId::for_labeled(id_str.to_string());
+
+        // Canonical form must be exactly the input string
+        assert_eq!(id.to_string(), id_str);
+        assert_eq!(id.as_str(), id_str);
+        assert_eq!(format!("{}", id), id_str);
+    }
+
+    #[test]
+    fn test_labeling_output_by_policy() {
+        // 1. External (ExternalKeyDefault -> Full)
+        let stripe_id = StripeId::for_labeled("cus_123".to_string());
+        // Default .labeled() should be Full: Entity@provenance::value
         assert_eq!(
-            ClientProvided::LABEL_POLICY,
-            LabelPolicy::OpaqueByDefault
+            stripe_id.labeled().to_string(),
+            "Customer@external::cus_123"
         );
+
+        // 2. Generated (EntityNameDefault -> Short)
+        let user_id = UserId::direct("User", "user-123".to_string());
+        // Default .labeled() should be Short: Entity::value
+        assert_eq!(user_id.labeled().to_string(), "User::user-123");
+
+        // 3. Temporary (OpaqueByDefault -> None)
+        let temp_id = TempId::for_labeled("temp-123".to_string());
+        // Default .labeled() should be None: value
+        assert_eq!(temp_id.labeled().to_string(), "temp-123");
+    }
+
+    #[test]
+    fn test_explicit_labeling_override() {
+        use crate::id::labeled::LabelMode;
+
+        let stripe_id = StripeId::for_labeled("cus_123".to_string());
+
+        // Force None
+        assert_eq!(
+            stripe_id.labeled().mode(LabelMode::None).to_string(),
+            "cus_123"
+        );
+
+        // Force Short
+        assert_eq!(
+            stripe_id.labeled().mode(LabelMode::Short).to_string(),
+            "Customer::cus_123"
+        );
+    }
+
+    #[test]
+    fn test_serialization_is_canonical() {
+        let id = StripeId::for_labeled("cus_123".to_string());
+
+        // Serialize
+        let json = serde_json::to_string(&id).unwrap();
+        assert_eq!(json, "\"cus_123\""); // Strictly the string value
+
+        // Deserialize
+        let deserialized: StripeId = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.to_string(), "cus_123");
+    }
+
+    #[test]
+    fn test_sourced_entity_impl() {
+        // Generated should implement Entity
+        fn assert_entity<E: Entity>() {}
+        assert_entity::<Sourced<User, Generated<strategies::UuidV7>>>();
     }
 
     #[test]
