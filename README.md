@@ -4,52 +4,65 @@
 [![Docs.rs](https://docs.rs/tagid/badge.svg)](https://docs.rs/tagid)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-`tagid` provides a robust system for defining and managing typed unique identifiers in Rust.  
-It supports multiple ID generation strategies (CUID, UUID, Snowflake) and integrates seamlessly with  
-`serde`, `sqlx`, and other frameworks.
+`tagid` provides a robust system for defining and managing typed unique identifiers in Rust. It supports multiple ID generation strategies (CUID, UUID, Snowflake) and enables rich semantic tracking via **Provenance**.
+
+## Core Architecture
+
+The tagid system is built on the principle of **Zero-Cost Semantic Tagging**. It separates the identity of an object from its origin and its presentation.
+
+### Component Overview
+
+```mermaid
+graph TD
+    subgraph "Core Types"
+        ID[Id<T, ID>]
+        Sourced[Sourced<E, S>]
+    end
+
+    subgraph "Traits"
+        Label[Label]
+        Provenance[Provenance]
+        Entity[Entity]
+    end
+
+    subgraph "Presentation"
+        Labeled[Labeled<T, ID>]
+        LabelMode{LabelMode}
+    end
+
+    ID --> Sourced
+    Sourced --> Label
+    Sourced --> Provenance
+    Sourced -.-> |Implements if S=Generated| Entity
+    ID -.-> |Produces| Labeled
+    Labeled --> LabelMode
+```
 
 ## Features
 
 - **Typed Identifiers**: Define entity-specific IDs with compile-time safety.
-- **Multiple ID Generators**:
-    - **CUID** (`cuid` feature) - Compact, collision-resistant IDs.
-    - **UUID** (`uuid` feature) - Universally unique identifiers.
-    - **Snowflake** (`snowflake` feature) - Time-based, distributed IDs.
-- **Entity Labeling**: Labels provide contextual meaning to identifiers.
-- **Serialization & Database Support**:
-    - [`serde`] integration for JSON and binary serialization (`serde` feature).
-    - [`sqlx`] integration for database storage (`sqlx` feature).
-- **Custom Labeling**: Define custom label formats for entities, which can be useful to disambiguate
-  ids in logging.
+- **Provenance Tracking**: Tag IDs with their origin (External, Generated, Imported, etc.).
+- **Opaque External IDs**: Preserve prefixes (like Stripe's `cus_`) exactly as received.
+- **Explicit Labeling**: Opt-in human-readable formatting for logs and UIs.
+- **Multiple ID Generators**: CUID, UUID (v4/v7), Snowflake, ULID.
+- **Framework Integration**: Seamless support for `serde` and `sqlx`.
 
-## Installation
+## The 6 Axes of tagid Design
 
-Add `tagid` to your `Cargo.toml`, enabling the desired features:
-
-```toml
-[dependencies]
-tagid = { version = "0.3.1", features = ["uuid", "serde", "sqlx"] }
-```
-
-## Optional Features
-
-| Feature          | Description                                                 |
-|------------------|-------------------------------------------------------------|
-| `"derive"`       | Enables `#[derive(Label)]` macro for automatic labeling.    |
-| `"cuid"`         | Enables the [`CuidGenerator`] for CUID-based IDs.           |
-| `"uuid"`         | Enables the [`UuidGenerator`] for UUID-based IDs.           |
-| `"snowflake"`    | Enables the [`SnowflakeGenerator`] for distributed IDs.     |
-| `"serde"`        | Enables serialization support via `serde`.                  |
-| `"sqlx"`         | Enables database integration via `sqlx`.                    |
-| `"disintegrate"` | Enables tagid identifiers in `disintegrate`.                |
-| `"envelope"`     | Provides an envelope struct for wrapping IDs with metadata. |
+1.  **Provenance**: Encode the origin of an ID (8 core types) at the type level with zero runtime cost.
+2.  **Strict Opaqueness**: Treat external identifiers as atomic atoms—no stripping or parsing of prefixes.
+3.  **Presentation vs. Data**: `Display` and `Serialize` are strictly canonical; human-friendly context is opt-in via `.labeled()`.
+4.  **Behavior Control**: Type safety ensures only `Generated` IDs can be created via `.next_id()`.
+5.  **LabelPolicy Bridge**: Sensible defaults for human output based on the ID's origin.
+6.  **Metadata Separation**: Auxiliary data lives in `Descriptor` types outside the core identifier.
 
 ## Usage
 
-### Defining an Entity with a Typed ID
+### Internal Generation
 
 ```rust
-use tagid::{Entity, Id, Label};
+use tagid::{Entity, Id, Label, Sourced, LabelMode};
+use tagid::id::provenance::{Generated, strategies};
 
 #[derive(Label)]
 struct User;
@@ -58,182 +71,72 @@ impl Entity for User {
     type IdGen = tagid::UuidGenerator;
 }
 
-fn main() {
-    let user_id = User::next_id();
-    println!("User ID: {}", user_id);
-}
-```
-
-## Labeling System
-
-Labels help associate an identifier with an entity, improving clarity in logs and databases. The `Label` trait provides a way to define a unique label for each entity type.
-
-```rust, ignore
-use tagid::{Label, Labeling};
-
-#[derive(Label)]
-struct Order;
-
-let order_label = Order::labeler().label();
-assert_eq!(order_label, "Order");
-```
-
-This ensures that IDs are self-descriptive when displayed, stored, or logged.
-
-## Working with Different ID Types
-### Using CUIDs
-
-Enable the `cuid` feature in `Cargo.toml`:
-
-```toml
-[dependencies]
-tagid = { version = "0.2", features = ["cuid"] }
-```
-
-Example usage:
-
-```rust
-use tagid::{Entity, Id, Label, CuidGenerator};
-
-#[derive(Label)]
-struct Session;
-
-impl Entity for Session {
-    type IdGen = CuidGenerator;
-}
+type UserId = Id<Sourced<User, Generated<strategies::UuidV7>>, ::uuid::Uuid>;
 
 fn main() {
-    let session_id = Session::next_id();
-    println!("Session ID: {}", session_id);
+    let user_id = UserId::new();
+    println!("Canonical: {}", user_id);           // 018d6f...
+    println!("Human:     {}", user_id.labeled());  // User::018d6f...
 }
 ```
 
-### Using UUIDs
-
-Enable the `uuid` feature:
-
-```toml
-[dependencies]
-tagid = { version = "0.2", features = ["uuid"] }
-```
-
-Example usage:
+### External Opaque IDs
 
 ```rust
-use tagid::{Entity, Id, Label, UuidGenerator};
-
-#[derive(Label)]
-struct User;
-
-impl Entity for User {
-    type IdGen = UuidGenerator;
-}
-
-fn main() {
-    let user_id = User::next_id();
-    println!("User ID: {}", user_id);
-}
-```
-
-### Using Snowflake IDs
-
-Enable the `snowflake` feature:
-
-```toml
-[dependencies]
-tagid = { version = "0.2", features = ["snowflake"] }
-```
-
-Example usage:
-
-```rust
-use tagid::{Entity, Id, Label, snowflake::SnowflakeGenerator};
-
-#[derive(Label)]
-struct LogEntry;
-
-impl Entity for LogEntry {
-    type IdGen = SnowflakeGenerator;
-}
-
-fn main() {
-    let log_id = LogEntry::next_id();
-    println!("Log ID: {}", log_id);
-}
-```
-
-## Serialization & Database Integration
-
-### JSON Serialization with `serde`
-
-Enable the `serde` feature in `Cargo.toml`
-
-```toml
-[dependencies]
-tagid = { version = "0.2", features = ["serde", "derive"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1"
-```
-
-Then serialize an ID:
-
-```rust
-use tagid::{Entity, Id, Label};
-use serde::{Serialize, Deserialize};
-
-#[derive(Label, Serialize, Deserialize)]
-struct Product;
-
-impl Entity for Product {
-    type IdGen = tagid::UuidGenerator;
-}
-
-fn main() {
-    let product_id = Product::next_id();
-    let serialized = serde_json::to_string(&product_id).unwrap();
-    println!("Serialized ID: {}", serialized);
-}
-```
-
-### SQL Database Integration with `sqlx`
-
-Enable `sqlx` support in `Cargo.toml`:
-
-```toml
-[dependencies]
-tagid = { version = "0.2", features = ["sqlx", "derive"] }
-sqlx = { version = "0.7", features = ["postgres"] }
-```
-
-Then use `Is<T, ID> in a database model:
-
-```rust
-use tagid::{Entity, Id, Label};
-use sqlx::FromRow;
+use tagid::{Id, Label, Sourced};
+use tagid::id::provenance::{External, providers};
 
 #[derive(Label)]
 struct Customer;
 
-impl Entity for Customer {
-    type IdGen = tagid::UuidGenerator;
-}
+type CustomerId = Id<Sourced<Customer, External<providers::Stripe>>, String>;
 
-#[derive(FromRow)]
-struct CustomerRecord {
-    id: Id<Customer, uuid::Uuid>,
-    name: String,
+fn main() {
+    // Preserve prefix "cus_" exactly as received from Stripe
+    let id = CustomerId::for_labeled("cus_L3H8Z6".to_string());
+    
+    assert_eq!(id.to_string(), "cus_L3H8Z6");
+    println!("Logging: {}", id.labeled()); // Customer@external::cus_L3H8Z6
 }
 ```
 
-## Benchmarking
+## Data Flow (Canonical Integrity)
 
-To measure the performance of difference ID generators, run:
-
-```shell
-cargo bench
+```mermaid
+flowchart LR
+    In([External Source]) -->|for_labeled| ID[tagid Typed ID]
+    ID -->|as_str| DB[(Database)]
+    ID -->|Serialize| JSON[JSON API]
+    ID -->|labeled| Logs[[Structured Logs]]
+    
+    style ID fill:#f96,stroke:#333,stroke-width:2px
 ```
+
+## Installation
+
+Add `tagid` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+tagid = { version = "0.4", features = ["uuid", "serde", "sqlx"] }
+```
+
+## Examples
+
+Detailed patterns in the `examples/` directory:
+- `01_basic_generation.rs`: Internal ID creation.
+- `02_external_opaque_ids.rs`: Handling foreign system identifiers.
+- `03_labeling_modes.rs`: Using Policies and Overrides.
+- `04_advanced_scenarios.rs`: Technical deep dive into the 6 Axes of tagid Design.
+- `05_distributed_strategies.rs`: Swapping CUID, Snowflake, and ULID.
+
+## Design Documents
+
+For a deep dive into the architecture and principles:
+- [tagid Redesign Specification](ref/tagid-redesign.md) (Technical Deep Dive)
+
 ## Contributing
 Contributions are welcome! Open an issue or submit a pull request on GitHub.
 
 ## License
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the MIT License.

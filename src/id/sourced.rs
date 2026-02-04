@@ -226,7 +226,11 @@ where
 /// this could be extended to include provider-specific information
 /// (e.g., "external/stripe" instead of just "external").
 fn provenance_display_name<S: Provenance>() -> String {
-    S::NAME.to_string()
+    // Format: "slug/vendor" if vendor is available, otherwise just "slug"
+    match S::VENDOR {
+        Some(vendor) => format!("{}/{}", S::SLUG, vendor),
+        None => S::SLUG.to_string(),
+    }
 }
 
 #[cfg(test)]
@@ -264,8 +268,28 @@ mod tests {
     #[test]
     fn test_provenance_display_name() {
         use super::super::provenance::{External, Temporary};
-        assert_eq!(provenance_display_name::<External<()>>(), "external");
-        assert_eq!(provenance_display_name::<Generated<()>>(), "generated");
-        assert_eq!(provenance_display_name::<Temporary>(), "temporary");
+        // Slug format (without vendor for generic types)
+        assert_eq!(provenance_display_name::<External<()>>(), "ext");
+        assert_eq!(provenance_display_name::<Generated<()>>(), "gen");
+        assert_eq!(provenance_display_name::<Temporary>(), "tmp");
+    }
+
+    #[test]
+    fn test_slug_format_matches_constants() {
+        use super::super::provenance::{External, Generated, Imported, Temporary};
+        // Each provenance type displays its slug (constant) correctly
+        assert_eq!(
+            provenance_display_name::<External<()>>(),
+            External::<()>::SLUG
+        );
+        assert_eq!(
+            provenance_display_name::<Generated<()>>(),
+            Generated::<()>::SLUG
+        );
+        assert_eq!(
+            provenance_display_name::<Imported<()>>(),
+            Imported::<()>::SLUG
+        );
+        assert_eq!(provenance_display_name::<Temporary>(), Temporary::SLUG);
     }
 }

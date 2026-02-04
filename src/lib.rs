@@ -96,22 +96,22 @@ mod labeling;
 
 #[cfg(feature = "envelope")]
 pub mod envelope;
-mod id;
+pub mod id;
 
-pub use id::{Entity, Id, IdGenerator};
+pub use id::{Entity, Id, IdGenerator, LabelMode, Labeled, Provenance, Sourced};
 pub use label::{Label, LabelPolicy};
 pub use labeling::{CustomLabeling, Labeling, MakeLabeling, NoLabeling};
 
-#[cfg(feature = "with-cuid")]
+#[cfg(feature = "cuid")]
 pub use id::{CuidGenerator, CuidId};
 
-#[cfg(feature = "with-ulid")]
+#[cfg(feature = "ulid")]
 pub use id::{Ulid, UlidGenerator, UlidId};
 
-#[cfg(feature = "with-uuid")]
+#[cfg(feature = "uuid")]
 pub use id::UuidGenerator;
 
-#[cfg(feature = "with-snowflake")]
+#[cfg(feature = "snowflake")]
 pub use id::{MachineNode, SnowflakeGenerator, snowflake};
 
 // The default delimiter used to separate entity labels from their ID values.

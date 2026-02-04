@@ -72,6 +72,25 @@ pub trait Provenance: 'static + Send + Sync + Default + Clone {
     /// - "imported/spark"
     const NAME: &'static str;
 
+    /// Canonical slug for wire format and display.
+    ///
+    /// Used in labeled output to show provenance compactly.
+    /// Examples:
+    /// - `"ext"` for External
+    /// - `"gen"` for Generated
+    /// - `"imp"` for Imported
+    /// - `"der"` for Derived
+    const SLUG: &'static str;
+
+    /// Optional vendor/provider/strategy name for additional context.
+    ///
+    /// Used in full labeled output (e.g., `"ext/stripe"` instead of just `"ext"`).
+    /// Examples:
+    /// - `Some("stripe")` for External<Stripe>
+    /// - `Some("spark")` for External<Spark>
+    /// - `None` for Generated (no vendor)
+    const VENDOR: Option<&'static str> = None;
+
     /// Preferred labeling behavior for this provenance.
     ///
     /// Controls the default output of `.labeled()` when called with no arguments.
@@ -93,6 +112,30 @@ pub trait Provenance: 'static + Send + Sync + Default + Clone {
     /// - `Generated<Snowflake>` might have generation timestamp
     /// - `Imported<LegacyDb>` might have migration date
     type Descriptor: Default + Clone + Send + Sync + 'static;
+}
+
+/// A container combining a sourced ID with its provenance-specific metadata.
+///
+/// This implements **Axis 6 (Metadata Separation)** of the tagid design.
+/// It keeps the core `Id` lean while allowing auxiliary data (like generation
+/// timestamps or provider versions) to be associated with the identifier.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WithProvenance<E: ?Sized, P: Provenance, ID> {
+    /// The sourced identifier.
+    pub id: crate::Id<crate::id::sourced::Sourced<E, P>, ID>,
+
+    /// Provenance-specific metadata (e.g. generation time, source version).
+    pub descriptor: P::Descriptor,
+}
+
+impl<E: ?Sized, P: Provenance, ID> WithProvenance<E, P, ID> {
+    /// Creates a new container with the given ID and descriptor.
+    pub fn new(
+        id: crate::Id<crate::id::sourced::Sourced<E, P>, ID>,
+        descriptor: P::Descriptor,
+    ) -> Self {
+        Self { id, descriptor }
+    }
 }
 
 pub use crate::LabelPolicy;
@@ -137,6 +180,8 @@ where
     P: 'static + Send + Sync + Default + Clone,
 {
     const NAME: &'static str = "external";
+    const SLUG: &'static str = "ext";
+    const VENDOR: Option<&'static str> = None;
     const LABEL_POLICY: LabelPolicy = LabelPolicy::ExternalKeyDefault;
     type Descriptor = ();
 }
@@ -173,6 +218,8 @@ where
     S: 'static + Send + Sync + Default + Clone,
 {
     const NAME: &'static str = "generated";
+    const SLUG: &'static str = "gen";
+    const VENDOR: Option<&'static str> = None;
     const LABEL_POLICY: LabelPolicy = LabelPolicy::EntityNameDefault;
     type Descriptor = ();
 }
@@ -205,6 +252,8 @@ where
     F: 'static + Send + Sync + Default + Clone,
 {
     const NAME: &'static str = "imported";
+    const SLUG: &'static str = "imp";
+    const VENDOR: Option<&'static str> = None;
     const LABEL_POLICY: LabelPolicy = LabelPolicy::ExternalKeyDefault;
     type Descriptor = ();
 }
@@ -237,6 +286,8 @@ where
     M: 'static + Send + Sync + Default + Clone,
 {
     const NAME: &'static str = "derived";
+    const SLUG: &'static str = "der";
+    const VENDOR: Option<&'static str> = None;
     const LABEL_POLICY: LabelPolicy = LabelPolicy::EntityNameDefault;
     type Descriptor = ();
 }
@@ -272,6 +323,8 @@ where
     Inner: Provenance,
 {
     const NAME: &'static str = "scoped";
+    const SLUG: &'static str = "sco";
+    const VENDOR: Option<&'static str> = None;
     const LABEL_POLICY: LabelPolicy = Inner::LABEL_POLICY;
     type Descriptor = ();
 }
@@ -297,6 +350,8 @@ pub struct Temporary;
 
 impl Provenance for Temporary {
     const NAME: &'static str = "temporary";
+    const SLUG: &'static str = "tmp";
+    const VENDOR: Option<&'static str> = None;
     const LABEL_POLICY: LabelPolicy = LabelPolicy::OpaqueByDefault;
     type Descriptor = ();
 }
@@ -322,6 +377,8 @@ pub struct ClientProvided;
 
 impl Provenance for ClientProvided {
     const NAME: &'static str = "client-provided";
+    const SLUG: &'static str = "cli";
+    const VENDOR: Option<&'static str> = None;
     const LABEL_POLICY: LabelPolicy = LabelPolicy::OpaqueByDefault;
     type Descriptor = ();
 }
@@ -356,12 +413,36 @@ where
     C: 'static + Send + Sync + Default + Clone,
 {
     const NAME: &'static str = "alias";
+    const SLUG: &'static str = "als";
+    const VENDOR: Option<&'static str> = None;
     const LABEL_POLICY: LabelPolicy = LabelPolicy::EntityNameDefault;
     type Descriptor = ();
 }
 
 // Marker traits for common providers and strategies
 // These are zero-sized markers used to specialize External<> and Generated<>
+
+/// Trait for vendor/provider markers to expose their vendor name.
+///
+/// Allows formatting slug/vendor display without runtime overhead.
+/// Used primarily with `External<Provider>` to show vendor context in labeled output.
+///
+/// # Example
+///
+/// ```ignore
+/// pub struct Stripe;
+/// impl Vendor for Stripe {
+///     const VENDOR: &'static str = "stripe";
+/// }
+///
+/// // In labeled output:
+/// // External<Stripe>::VENDOR = Some("stripe")
+/// // Display: "ext/stripe" instead of just "ext"
+/// ```
+pub trait Vendor {
+    /// The vendor/provider/strategy name (e.g., "stripe", "spark", "uuid-v7").
+    const VENDOR: &'static str;
+}
 
 /// Provider markers for External<Provider>
 pub mod providers {
@@ -404,6 +485,39 @@ pub mod providers {
     #[allow(dead_code)]
     #[derive(Debug, Default, Clone, Copy)]
     pub struct Nessie;
+
+    // Vendor trait implementations for providers
+    impl super::Vendor for Stripe {
+        const VENDOR: &'static str = "stripe";
+    }
+
+    impl super::Vendor for Github {
+        const VENDOR: &'static str = "github";
+    }
+
+    impl super::Vendor for Spark {
+        const VENDOR: &'static str = "spark";
+    }
+
+    impl super::Vendor for Okta {
+        const VENDOR: &'static str = "okta";
+    }
+
+    impl super::Vendor for AwsS3 {
+        const VENDOR: &'static str = "aws-s3";
+    }
+
+    impl super::Vendor for GoogleCloud {
+        const VENDOR: &'static str = "google-cloud";
+    }
+
+    impl super::Vendor for Iceberg {
+        const VENDOR: &'static str = "iceberg";
+    }
+
+    impl super::Vendor for Nessie {
+        const VENDOR: &'static str = "nessie";
+    }
 }
 
 /// Strategy markers for Generated<Strategy>
@@ -555,10 +669,8 @@ mod tests {
         // 1. External (ExternalKeyDefault -> Full)
         let stripe_id = StripeId::for_labeled("cus_123".to_string());
         // Default .labeled() should be Full: Entity@provenance::value
-        assert_eq!(
-            stripe_id.labeled().to_string(),
-            "Customer@external::cus_123"
-        );
+        // Note: Now using slug format ("ext") instead of name format ("external")
+        assert_eq!(stripe_id.labeled().to_string(), "Customer@ext::cus_123");
 
         // 2. Generated (EntityNameDefault -> Short)
         let user_id = UserId::direct("User", "user-123".to_string());

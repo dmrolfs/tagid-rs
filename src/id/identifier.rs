@@ -48,9 +48,20 @@ pub struct Id<T: ?Sized, ID> {
     marker: PhantomData<T>,
 }
 
+/// Safety: `Id<T, ID>` is Send only if ID is Send.
+///
+/// T is never stored at runtime—it's purely a type-level marker (PhantomData).
+/// Rust's automatic Send/Sync derivation doesn't understand this, so we explicitly
+/// state the actual requirement: only ID determines thread safety, not T.
+/// This is safe because T is never dereferenced or moved at runtime.
 #[allow(unsafe_code)]
 unsafe impl<T: ?Sized, ID: Send> Send for Id<T, ID> {}
 
+/// Safety: `Id<T, ID>` is Sync only if ID is Sync.
+///
+/// Same reasoning as Send impl: T is type-level only (PhantomData).
+/// T is never actually stored or accessed at runtime, so its thread safety doesn't matter.
+/// Only ID's thread safety determines whether the overall type is Sync.
 #[allow(unsafe_code)]
 unsafe impl<T: ?Sized, ID: Sync> Sync for Id<T, ID> {}
 

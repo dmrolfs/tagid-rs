@@ -26,14 +26,20 @@ suspicious = "warn"
 resolver = "2"
 
 [features]
-default = ["derive", "with-cuid"]
+default = ["derive", "cuid"]
 derive = ["tagid-derive"]
 envelope = ["iso8601-timestamp"]
 functional = ["frunk"]
+uuid = ["dep:uuid"]
+cuid = ["dep:cuid2"]
+ulid = ["dep:ulid"]
+snowflake = ["dep:rs-snowflake"]
+
+# Deprecated aliases for backward compatibility
 with-uuid = ["uuid"]
-with-cuid = ["cuid2"]
+with-cuid = ["cuid"]
 with-ulid = ["ulid"]
-with-snowflake = ["rs-snowflake"]
+with-snowflake = ["snowflake"]
 
 [dependencies]
 cuid2 = { optional = true, version = "^0.1" }

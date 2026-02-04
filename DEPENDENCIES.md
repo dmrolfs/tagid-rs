@@ -135,7 +135,7 @@ bd ready --json  # Show unblocked work
 
 ### Before Starting Implementation
 
-- [ ] Read `ref/spark-turtle__tagid-final-design.md` (full spec)
+- [ ] Read `ref/tagid-redesign.md` (full spec)
 - [ ] Read `ref/spark-turtle__tagid-implementation-checklist.md` (step-by-step)
 - [ ] Understand Oracle reasoning
 - [ ] Review examples in `ref/` folder
@@ -197,7 +197,7 @@ pub type StageId = Id<Sourced<StageLabel, Generated<UuidV7>>, String>;
 ### In this Project (tagid-rs)
 
 - **`ref/`** folder (created with tid-440):
-  - `spark-turtle__tagid-final-design.md`
+  - `tagid-redesign.md`
   - `spark-turtle__tagid-implementation-checklist.md`
   - `spark-turtle__tagid-examples.md`
   - `spark-turtle__tagid-architecture.md`

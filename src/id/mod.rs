@@ -7,10 +7,10 @@
 //! - [`Entity`] Trait: Defines an entity with an associated [`IdGenerator`] for unique ID generation.
 //! - [`Id<T, ID>`] Struct: Represents an ID associated with an entity type `T` and an ID value of type `ID`.
 //! - ID Generation Strategies:
-//!   - **CUID** ([`CuidGenerator`], [`CuidId`]) - Enabled with the `with-cuid` feature.
-//!   - **ULID** ([`UlidGenerator`]) - Enabled with the `with-ulid` feature.
-//!   - **UUID** ([`UuidGenerator`]) - Enabled with the `with-uuid` feature.
-//!   - **Snowflake** ([`SnowflakeGenerator`]) - Enabled with the `with-snowflake` feature.
+//!   - **CUID** ([`CuidGenerator`], [`CuidId`]) - Enabled with the `cuid` feature.
+//!   - **ULID** ([`UlidGenerator`]) - Enabled with the `ulid` feature.
+//!   - **UUID** ([`UuidGenerator`]) - Enabled with the `uuid` feature.
+//!   - **Snowflake** ([`SnowflakeGenerator`]) - Enabled with the `snowflake` feature.
 //!
 //! ## Features
 //!
@@ -44,41 +44,41 @@
 //!
 //! | Feature           | Generator               | Description                                      |
 //! |-------------------|-------------------------|--------------------------------------------------|
-//! | `"with-cuid"`     | [`CuidGenerator`]       | Generates CUID-based IDs.                        |
-//! | `"with-ulid"`     | [`UlidGenerator`]       | Generates ULID-based IDs.                        |
-//! | `"with-uuid"`     | [`UuidGenerator`]       | Generates UUID-based IDs.                        |
-//! | `"with-snowflake"`| [`SnowflakeGenerator`]  | Uses the Snowflake algorithm for distributed ID generation. |
+//! | `"cuid"`          | [`CuidGenerator`]       | Generates CUID-based IDs.                        |
+//! | `"ulid"`          | [`UlidGenerator`]       | Generates ULID-based IDs.                        |
+//! | `"uuid"`          | [`UuidGenerator`]       | Generates UUID-based IDs.                        |
+//! | `"snowflake"`     | [`SnowflakeGenerator`]  | Uses the Snowflake algorithm for distributed ID generation. |
 //!
 //! To enable a specific ID generation method, add the corresponding feature to your `Cargo.toml`:
 //!
 //! ```toml
 //! [dependencies]
-//! tagid = { version = "0.2", features = ["with-uuid", "with-snowflake"] }
+//! tagid = { version = "0.2", features = ["uuid", "snowflake"] }
 //! ```
 
 mod generator;
 pub use generator::IdGenerator;
 
-#[cfg(feature = "with-cuid")]
+#[cfg(feature = "cuid")]
 pub mod cuid;
-#[cfg(feature = "with-cuid")]
+#[cfg(feature = "cuid")]
 pub use cuid::{CuidGenerator, CuidId};
 
-#[cfg(feature = "with-ulid")]
+#[cfg(feature = "ulid")]
 pub mod ulid;
-#[cfg(feature = "with-ulid")]
+#[cfg(feature = "ulid")]
 #[allow(unused_imports)]
 pub use ulid::{Ulid, UlidGenerator, UlidId};
 
-#[cfg(feature = "with-uuid")]
+#[cfg(feature = "uuid")]
 mod uuid;
-#[cfg(feature = "with-uuid")]
+#[cfg(feature = "uuid")]
 #[allow(unused_imports)]
 pub use uuid::{UuidGenerator, UuidId};
 
-#[cfg(feature = "with-snowflake")]
+#[cfg(feature = "snowflake")]
 pub mod snowflake;
-#[cfg(feature = "with-snowflake")]
+#[cfg(feature = "snowflake")]
 #[allow(unused_imports)]
 pub use self::snowflake::{MachineNode, SnowflakeGenerator, pretty};
 
@@ -86,6 +86,7 @@ mod identifier;
 pub use identifier::Id;
 
 pub mod labeled;
+pub use labeled::{LabelMode, Labeled};
 pub mod provenance;
 pub mod sourced;
 #[allow(unused_imports)]
@@ -179,7 +180,8 @@ mod tests {
     #[test]
     fn test_display() {
         let a: Id<Foo, String> = Foo::next_id();
-        assert_eq!(format!("{a}"), format!("MyFooferNut::{}", a.id));
+        // Display is ALWAYS canonical (no labels)
+        assert_eq!(format!("{a}"), a.id.to_string());
     }
 
     #[test]
@@ -248,16 +250,30 @@ mod tests {
     #[test]
     fn test_id_cross_conversion() {
         let a = Foo::next_id();
-        let before = format!("{}", a);
-        assert_eq!(format!("MyFooferNut::{}", a.id), before);
+
+        // Display is canonical (no labels)
+        let display_a = format!("{a}");
+        assert_eq!(a.id.to_string(), display_a); // Canonical = just ID
+
+        // Debug is labeled (includes entity context)
+        let debug_a = format!("{a:?}");
+        assert_eq!(format!("MyFooferNut::{:?}", a.id), debug_a); // Labeled with entity
 
         let b: Id<NoLabelZed, String> = a.relabel();
-        let after_zed = format!("{}", b);
-        assert_eq!(format!("{}", a.id), after_zed);
+
+        // Display canonical is same for both (no labels)
+        assert_eq!(format!("{a}"), format!("{b}")); // Same canonical
+
+        // Debug labels differ (different entities)
+        assert_ne!(format!("{a:?}"), format!("{b:?}")); // Different labels
 
         let c: Id<Bar, String> = a.relabel();
-        let after_bar = format!("{}", c);
-        assert_eq!(format!("Bar::{}", a.id), after_bar);
+
+        // Display canonical is same (no labels)
+        assert_eq!(format!("{a}"), format!("{c}")); // Same canonical
+
+        // Debug labels differ
+        assert_ne!(format!("{a:?}"), format!("{c:?}")); // Different labels
     }
 
     #[test]
