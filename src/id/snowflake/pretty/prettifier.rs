@@ -265,7 +265,7 @@ impl<C: Codec> IdPrettifier<C> {
     /// # Returns
     /// * A prettified ID string with encoded and raw numeric segments.
     fn convert_parts(&self, parts: Vec<String>) -> String {
-        let encode_odd = parts.len() % 2 == 0;
+        let encode_odd = parts.len().is_multiple_of(2);
         let padded_converted_parts =
             parts
                 .into_iter()
@@ -340,7 +340,7 @@ impl<C: Codec> IdPrettifier<C> {
     /// * A string containing the full decoded ID including its checksum.
     fn decode_seed_with_check_digit(&self, rep: impl AsRef<str>) -> String {
         let parts: Vec<&str> = rep.as_ref().split(&self.delimiter).collect();
-        let decode_even = parts.len() % 2 != 0;
+        let decode_even = !parts.len().is_multiple_of(2);
         let decoded_with_check_digit =
             parts
                 .into_iter()
@@ -366,10 +366,9 @@ impl<C: Codec> IdPrettifier<C> {
 
 #[cfg(test)]
 mod tests {
-    use pretty_assertions::assert_eq;
-
     use super::*;
     use crate::id::snowflake::pretty::codec::AlphabetCodec;
+    use pretty_assertions::assert_eq;
 
     const EXAMPLE_ID: i64 = 824227036833910784;
     const EXAMPLE_REP: &str = "824227036833910784";
