@@ -85,6 +85,13 @@ pub use self::snowflake::{MachineNode, SnowflakeGenerator, pretty};
 mod identifier;
 pub use identifier::Id;
 
+pub mod provenance;
+#[allow(unused_imports)]
+pub use provenance::{
+    Provenance, LabelPolicy, External, Generated, Imported, Derived, Scoped, Temporary,
+    ClientProvided, AliasOf, providers, strategies,
+};
+
 use crate::Label;
 
 /// A trait for entities that have a unique identifier.
