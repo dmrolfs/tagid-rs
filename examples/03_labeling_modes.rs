@@ -80,14 +80,14 @@ fn main() {
     println!("=== tagid Redesign: Labeling & Provenance Demo ===\n");
 
     // ------------------------------------------------------------------------
-    // CONSTRUCTION: .for_labeled() is simpler than .direct()
+    // CONSTRUCTION: Provenance-Aware Functions
     // ------------------------------------------------------------------------
-    // Use .for_labeled() when the label is already defined by the type alias.
-    // It's cleaner and less error-prone than passing the label string manually.
+    // tagid provides semantic construction functions that clarify where an ID
+    // comes from. These are zero-cost aliases to `from_canonical()`.
     let user_id = UserId::new(); // Uses Entity::next_id()
-    let stripe_id = StripeId::for_labeled("cus_L3H8Z6".to_string());
-    let legacy_id = LegacyUserId::for_labeled(98765);
-    let slug_id = PageSlug::for_labeled("welcome-to-tagid".to_string());
+    let stripe_id = StripeId::from_source("cus_L3H8Z6".to_string());
+    let legacy_id = LegacyUserId::from_source(98765);
+    let slug_id = PageSlug::alias_for("welcome-to-tagid".to_string());
 
     // ------------------------------------------------------------------------
     // DEFAULT OUTPUT (Respects LabelPolicy)
@@ -105,7 +105,7 @@ fn main() {
     // Output: Customer@ext/stripe::cus_L3H8Z6
 
     // Temporary -> OpaqueByDefault (Show value only)
-    let session = SessionId::for_labeled("sess_123".to_string());
+    let session = SessionId::for_temporary("sess_123".to_string());
     println!("  Temporary:  {}", session.labeled());
     // Output: sess_123
 
@@ -172,7 +172,7 @@ fn main() {
     println!("  as_str():    {}", stripe_id.as_str()); // cus_L3H8Z6
 
     // Note: Scoped IDs maintain their atomic canonical value
-    let issue = RepoIssueId::for_labeled(42);
+    let issue = RepoIssueId::for_scope(42);
     println!("  Scoped labeled:      {}", issue.labeled());
     // Output: User@scoped::42 (where 42 is the canonical ID)
 }

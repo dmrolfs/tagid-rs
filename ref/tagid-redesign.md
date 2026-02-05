@@ -131,7 +131,7 @@ sequenceDiagram
 
     note over App: 1. Creation
     Ext ->> App: Received "cus_123"
-    App ->> Tag: CustomerId::for_labeled("cus_123")
+    App ->> Tag: CustomerId::from_source("cus_123")
     Tag -->> App: Id<Sourced<Customer, External>>
 
     note over App: 2. Processing & Logging
@@ -152,7 +152,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    In([External Source]) -->|for_labeled| ID[tagid Typed ID]
+    In([External Source]) -->|from_source| ID[tagid Typed ID]
     ID -->|as_str| DB[(Database)]
     ID -->|Serialize| JSON[JSON API]
     ID -->|labeled| Logs[[Structured Logs]]
@@ -163,4 +163,23 @@ flowchart LR
 
 This architecture ensures that while developers get rich, type-safe, and descriptive identifiers in their code, the data leaving the application boundary remains compatible with all downstream systems.
 
-For a concrete demonstration of these principles, see `examples/04_advanced_scenarios.rs`.
+For a concrete demonstration of these principles, see `examples/06_provenance_aware_construction.rs`.
+
+---
+
+## 7. Provenance-Aware Construction (v1.1.0)
+
+As of version 1.1.0, `tagid` provides semantic construction functions that clarify the origin and intent of an identifier.
+
+| Function | Provenance Type | Semantic Intent |
+|----------|-----------------|-----------------|
+| `from_canonical()` | Generic | Create from a raw canonical value (internal) |
+| `from_source()` | `External`, `Imported` | ID comes FROM an external system |
+| `derived_from()` | `Derived` | ID is DERIVED FROM source data (deterministic) |
+| `from_client()` | `ClientProvided` | ID comes FROM a user/client |
+| `for_scope()` | `Scoped` | ID is scoped TO a context |
+| `alias_for()` | `AliasOf` | ID is an ALIAS FOR the entity (secondary) |
+| `for_temporary()` | `Temporary` | ID is FOR TEMPORARY use (don't persist!) |
+| `for_test()` | `Generated` (Tests) | ID is FOR TESTING only (fixtures) |
+
+These functions are **zero-cost aliases** to `from_canonical()` (the renamed `for_labeled()`) and provide semantic guidance that makes code more readable and self-documenting.

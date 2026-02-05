@@ -1,6 +1,6 @@
 [package]
 name = "tagid-derive"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 authors = ["Damon Rolfs <drolfs@gmail.com>"]
 description = "Defines a derive macro for the tagid newtype labeled tagging for different types of ids."
@@ -13,9 +13,9 @@ keywords = ["identifier", "id", "cuid", "snowflake", "uuid"]
 categories = ["data-structures", "development-tools"]
 
 [dependencies]
-proc-macro2 = "1.0.51"
-quote = "1.0.23"
-syn = { version = "1.0.107", features = ["full"] }
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "2.0", features = ["full"] }
 
 [lib]
 proc-macro = true

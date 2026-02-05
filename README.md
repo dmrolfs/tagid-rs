@@ -93,7 +93,7 @@ type CustomerId = Id<Sourced<Customer, External<providers::Stripe>>, String>;
 
 fn main() {
     // Preserve prefix "cus_" exactly as received from Stripe
-    let id = CustomerId::for_labeled("cus_L3H8Z6".to_string());
+    let id = CustomerId::from_source("cus_L3H8Z6".to_string());
     
     assert_eq!(id.to_string(), "cus_L3H8Z6");
     println!("Logging: {}", id.labeled()); // Customer@external::cus_L3H8Z6
@@ -104,7 +104,7 @@ fn main() {
 
 ```mermaid
 flowchart LR
-    In([External Source]) -->|for_labeled| ID[tagid Typed ID]
+    In([External Source]) -->|from_source| ID[tagid Typed ID]
     ID -->|as_str| DB[(Database)]
     ID -->|Serialize| JSON[JSON API]
     ID -->|labeled| Logs[[Structured Logs]]
@@ -134,6 +134,7 @@ Detailed patterns in the `examples/` directory:
 
 For a deep dive into the architecture and principles:
 - [tagid Redesign Specification](ref/tagid-redesign.md) (Technical Deep Dive)
+- [Provenance-Aware Construction Patterns](ref/lessons/provenance-construction-patterns.md) (When and how to create IDs)
 
 ## Contributing
 Contributions are welcome! Open an issue or submit a pull request on GitHub.

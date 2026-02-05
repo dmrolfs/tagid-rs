@@ -8,6 +8,9 @@
 //! - [`LabelPolicy`] enum: Controls how IDs are displayed to humans
 //! - 8 core provenance types covering all common scenarios
 //!
+//! For detailed guidance on choosing the right construction function based on
+//! provenance, see [Provenance-Aware Construction Patterns](https://github.com/dmrolfs/tagid-rs/blob/main/ref/lessons/provenance-construction-patterns.md).
+//!
 //! # Philosophy
 //!
 //! Provenance is **semantic metadata about ID origin**, separate from:
@@ -775,7 +778,7 @@ mod tests {
     fn test_canonical_id_is_opaque() {
         // Stripe ID example from design docs
         let id_str = "cus_L3H8Z6K9j2";
-        let id = StripeId::for_labeled(id_str.to_string());
+        let id = StripeId::from_canonical(id_str.to_string());
 
         // Canonical form must be exactly the input string
         assert_eq!(id.to_string(), id_str);
@@ -786,7 +789,7 @@ mod tests {
     #[test]
     fn test_labeling_output_by_policy() {
         // 1. External (ExternalKeyDefault -> Full)
-        let stripe_id = StripeId::for_labeled("cus_123".to_string());
+        let stripe_id = StripeId::from_canonical("cus_123".to_string());
         // Default .labeled() should be Full: Entity@slug/vendor::value
         // Stripe provider includes vendor in slug display
         assert_eq!(
@@ -800,7 +803,7 @@ mod tests {
         assert_eq!(user_id.labeled().to_string(), "User::user-123");
 
         // 3. Temporary (OpaqueByDefault -> None)
-        let temp_id = TempId::for_labeled("temp-123".to_string());
+        let temp_id = TempId::from_canonical("temp-123".to_string());
         // Default .labeled() should be None: value
         assert_eq!(temp_id.labeled().to_string(), "temp-123");
     }
@@ -809,7 +812,7 @@ mod tests {
     fn test_explicit_labeling_override() {
         use crate::id::labeled::LabelMode;
 
-        let stripe_id = StripeId::for_labeled("cus_123".to_string());
+        let stripe_id = StripeId::from_canonical("cus_123".to_string());
 
         // Force None
         assert_eq!(
@@ -826,7 +829,7 @@ mod tests {
 
     #[test]
     fn test_serialization_is_canonical() {
-        let id = StripeId::for_labeled("cus_123".to_string());
+        let id = StripeId::from_canonical("cus_123".to_string());
 
         // Serialize
         let json = serde_json::to_string(&id).unwrap();

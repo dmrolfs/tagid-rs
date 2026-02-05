@@ -24,7 +24,7 @@ fn main() {
     let raw_id = "cus_L3H8Z6K9j2";
 
     // Create a typed ID from the external source.
-    let id = StripeCustomerId::for_labeled(raw_id.to_string());
+    let id = StripeCustomerId::from_source(raw_id.to_string());
 
     // 1. PRINCIPLE: OPAQUENESS
     // We preserve the prefix "cus_" exactly as received.

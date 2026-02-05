@@ -67,7 +67,7 @@ fn main() {
     // AXIS 2: Strict Opaque Handling
     // ------------------------------------------------------------------------
     // We receive "cus_L3H8Z6" from Stripe. We preserve it EXACTLY.
-    let stripe_id = StripeCustomerId::for_labeled("cus_L3H8Z6".to_string());
+    let stripe_id = StripeCustomerId::from_source("cus_L3H8Z6".to_string());
 
     println!("Axis 2 (Opaque Handling):");
     println!("  Stripe ID:   {}", stripe_id); // Output: cus_L3H8Z6 (Prefix preserved)
@@ -98,7 +98,7 @@ fn main() {
     }
 
     // Temporary IDs default to "None" mode (Axis 5: OpaqueByDefault)
-    let session = SessionToken::for_labeled("sess_123".to_string());
+    let session = SessionToken::for_temporary("sess_123".to_string());
     println!("  Temporary:   {}", session.labeled());
     // Output: sess_123 (Labels hidden for sensitive/ephemeral IDs)
 
@@ -138,7 +138,7 @@ fn main() {
     // COMBINED SCENARIO: Data Migration
     // ------------------------------------------------------------------------
     println!("\nCombined Scenario: Migration");
-    let legacy_order = LegacyOrderId::for_labeled(98765);
+    let legacy_order = LegacyOrderId::from_source(98765);
 
     // We get provenance info in logs (Axis 5), opaque preservation (Axis 2),
     // and type safety (Axis 4).

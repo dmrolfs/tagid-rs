@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-02-04
+
+### Added
+
+- **Provenance-Aware Construction Functions**: Added semantic methods to `Id<T, ID>` that clarify ID origin based on provenance type:
+  - `from_source()` — for External/Imported IDs from systems
+  - `derived_from()` — for Derived IDs computed from data
+  - `from_client()` — for ClientProvided IDs from users
+  - `for_scope()` — for Scoped IDs with context
+  - `alias_for()` — for AliasOf secondary IDs
+  - `for_temporary()` — for Temporary ephemeral IDs
+  - `for_test()` — for Generated IDs in tests
+
+  These are **zero-cost aliases** to `from_canonical()` (formerly `for_labeled()`) and serve as **semantic guidance** for choosing the right construction method based on provenance type.
+  All methods are **backward compatible**.
+
+- **Renamed `for_labeled()` to `from_canonical()`**: The generic constructor was renamed to better reflect that it takes a canonical ID value as an argument. `for_labeled()` remains as a deprecated alias.
+
 ## [1.0.0] - 2026-02-04
 
 ### Added

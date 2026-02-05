@@ -16,6 +16,9 @@ use disintegrate::{IdentifierType, IdentifierValue, IntoIdentifierValue};
 ///
 /// `Id<T, ID>` associates an entity type `T` with an ID value of type `ID`.
 ///
+/// For detailed guidance on choosing the right construction function based on
+/// provenance, see [Provenance-Aware Construction Patterns](https://github.com/dmrolfs/tagid-rs/blob/main/ref/lessons/provenance-construction-patterns.md).
+///
 /// # Example
 ///
 /// ```rust,ignore
@@ -76,7 +79,7 @@ impl<T: ?Sized, ID> AsRef<ID> for Id<T, ID> {
 
 impl<T: ?Sized + Label, ID> From<ID> for Id<T, ID> {
     fn from(id: ID) -> Self {
-        Self::for_labeled(id)
+        Self::from_canonical(id)
     }
 }
 
@@ -108,13 +111,253 @@ impl<T, ID> Id<T, ID>
 where
     T: Label + ?Sized,
 {
-    pub fn for_labeled(id: ID) -> Self {
+    /// Create an `Id` from a canonical ID value.
+    ///
+    /// The label is automatically retrieved from the entity type `T`.
+    pub fn from_canonical(id: ID) -> Self {
         let labeler = <T as Label>::labeler();
         Self {
             label: SmolStr::new(labeler.label()),
             id,
             marker: PhantomData,
         }
+    }
+
+    #[deprecated(since = "1.1.0", note = "use from_canonical instead")]
+    pub fn for_labeled(id: ID) -> Self {
+        Self::from_canonical(id)
+    }
+
+    // ========== EXTERNAL / IMPORTED ==========
+
+    /// Create an ID from an external system or legacy source.
+    ///
+    /// Used for IDs that originate from external systems (APIs, databases,
+    /// data imports, migrations) where the value is **opaque** and should
+    /// be preserved exactly as received.
+    ///
+    /// # Semantics
+    /// - The ID comes **FROM** an external source
+    /// - The value is **opaque** — don't parse, transform, or validate it
+    /// - Used with `External<Provider>` or `Imported<From>` provenance
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use tagid::id::provenance::External;
+    ///
+    /// pub struct Stripe;
+    /// pub type StripeCustomerId = Id<Sourced<Customer, External<Stripe>>, String>;
+    ///
+    /// let id = StripeCustomerId::from_source("cus_L3H8Z6K9j2");
+    /// assert_eq!(id.to_string(), "cus_L3H8Z6K9j2");
+    /// ```
+    ///
+    /// # See Also
+    /// - `derived_from()` — for IDs computed from data
+    /// - `from_client()` — for user-provided IDs
+    /// - For `External<Provider>` provenance
+    pub fn from_source(id: ID) -> Self {
+        Self::from_canonical(id)
+    }
+
+    // ========== DERIVED ==========
+
+    /// Create an ID derived deterministically from source data.
+    ///
+    /// Used for IDs that are **computed** from other fields where the same
+    /// source always produces the same ID (unlike `generate()` which is random).
+    ///
+    /// # Semantics
+    /// - The ID is **derived FROM** source data
+    /// - Creation is **deterministic** — same input → same output
+    /// - Different from `Generated` (which is random)
+    /// - Different from `External` (which is opaque)
+    /// - Used with `Derived<Method>` provenance
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use tagid::id::provenance::Derived;
+    ///
+    /// pub struct Slugify;
+    /// pub type PageSlugId = Id<Sourced<Page, Derived<Slugify>>, String>;
+    ///
+    /// let slug = PageSlugId::derived_from(slugify("My Page Title"));
+    /// assert_eq!(slug.to_string(), "my-page-title");
+    /// ```
+    ///
+    /// # See Also
+    /// - `from_source()` — for external/legacy IDs
+    /// - `generate()` — for random IDs
+    /// - For `Derived<Method>` provenance
+    pub fn derived_from(id: ID) -> Self {
+        Self::from_canonical(id)
+    }
+
+    // ========== CLIENT PROVIDED ==========
+
+    /// Create an ID provided by a user or client.
+    ///
+    /// Used for IDs that are **supplied by the client or user** rather than
+    /// generated or imported by the system.
+    ///
+    /// # Semantics
+    /// - The ID comes **FROM** the user/client
+    /// - Different from `External` which comes from a **system** or **API**
+    /// - Used with `ClientProvided` provenance
+    /// - Often validated but not transformed
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use tagid::id::provenance::ClientProvided;
+    ///
+    /// pub type IdempotencyKey = Id<Sourced<Request, ClientProvided>, String>;
+    ///
+    /// let key = IdempotencyKey::from_client(client_provided_key);
+    /// assert_eq!(key.to_string(), client_provided_key);
+    /// ```
+    ///
+    /// # See Also
+    /// - `from_source()` — for external system IDs
+    /// - For `ClientProvided` provenance
+    pub fn from_client(id: ID) -> Self {
+        Self::from_canonical(id)
+    }
+
+    // ========== SCOPED ==========
+
+    /// Create a context-scoped ID (unique within a scope, not globally).
+    ///
+    /// Used for IDs that are **unique within a context** (tenant, organization,
+    /// workspace) but not globally unique.
+    ///
+    /// # Semantics
+    /// - The ID is **scoped TO** a context
+    /// - Uniqueness is **context-relative**, not global
+    /// - Used with `Scoped<Scope, Inner>` provenance
+    /// - The inner provenance determines allowed operations
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use tagid::id::provenance::{Scoped, Generated};
+    ///
+    /// pub type TenantId = Id<Sourced<Tenant, Generated<UuidV7>>, String>;
+    /// pub type TenantResourceId =
+    ///     Id<Sourced<Resource, Scoped<TenantId, Generated<UuidV7>>>, String>;
+    ///
+    /// let resource = TenantResourceId::for_scope(tenant_id);
+    /// // Or use the inner provenance's method:
+    /// let resource = TenantResourceId::generate();  // Generates, still scoped
+    /// ```
+    ///
+    /// # See Also
+    /// - Inner provenance determines `.generate()`, `.from_source()`, etc.
+    /// - For `Scoped<Scope, Inner>` provenance
+    pub fn for_scope(id: ID) -> Self {
+        Self::from_canonical(id)
+    }
+
+    // ========== ALIAS ==========
+
+    /// Create a secondary identifier (alias) for an entity.
+    ///
+    /// Used for IDs that are **aliases** or **secondary identifiers** for the
+    /// same entity where the primary ID is defined elsewhere.
+    ///
+    /// # Semantics
+    /// - This is a **secondary ID**, not the primary/canonical ID
+    /// - Used with `AliasOf<Canonical>` provenance
+    /// - Often combined with `Derived` (e.g., email is derived)
+    /// - Enables alternative lookup but primary ID is canonical
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use tagid::id::provenance::AliasOf;
+    ///
+    /// pub type UserId = Id<Sourced<User, Generated<UuidV7>>, String>;
+    /// pub type UserEmailAlias = Id<Sourced<User, AliasOf<UserId>>, String>;
+    ///
+    /// let email_alias = UserEmailAlias::alias_for("user@example.com");
+    /// assert_eq!(email_alias.to_string(), "user@example.com");
+    /// ```
+    ///
+    /// # See Also
+    /// - Often paired with `Derived` for computed aliases
+    /// - For `AliasOf<Canonical>` provenance
+    pub fn alias_for(id: ID) -> Self {
+        Self::from_canonical(id)
+    }
+
+    // ========== TEMPORARY ==========
+
+    /// Create a temporary ID (valid only short-term, not for persistence).
+    ///
+    /// Used for **ephemeral IDs** that should not be persisted to databases
+    /// or caches.
+    ///
+    /// # Semantics
+    /// - The ID is **FOR TEMPORARY use only**
+    /// - Should **never be persisted** to databases or caches
+    /// - Used with `Temporary` provenance
+    /// - Examples: optimistic IDs, session tokens, request IDs
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use tagid::id::provenance::Temporary;
+    ///
+    /// pub type OptimisticId = Id<Sourced<Item, Temporary>, String>;
+    ///
+    /// let id = OptimisticId::for_temporary(uuid::Uuid::new_v4().to_string());
+    /// // ⚠️  Important: never persist this to the database!
+    /// ```
+    ///
+    /// # See Also
+    /// - Different from `Generated` which **should** be persisted
+    /// - For `Temporary` provenance
+    pub fn for_temporary(id: ID) -> Self {
+        Self::from_canonical(id)
+    }
+
+    // ========== GENERATED (Testing/Fixtures) ==========
+
+    /// Create a Generated ID for testing purposes.
+    ///
+    /// Used in fixtures and tests where you need to construct IDs explicitly
+    /// without actually generating them (which is done via `generate()` or
+    /// the `Entity` trait in production).
+    ///
+    /// # Semantics
+    /// - Used **only for tests and fixtures**, not production
+    /// - For production ID generation, use `generate()` instead
+    /// - Used with `Generated<Strategy>` provenance
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use tagid::id::provenance::Generated;
+    ///
+    /// pub type UserId = Id<Sourced<User, Generated<UuidV7>>, String>;
+    ///
+    /// #[test]
+    /// fn test_user_creation() {
+    ///     let user_id = UserId::for_test("user-123".to_string());
+    ///     assert_eq!(user_id.to_string(), "user-123");
+    /// }
+    ///
+    /// // For production:
+    /// let user_id = UserId::generate();  // ← use this instead
+    /// ```
+    ///
+    /// # See Also
+    /// - `generate()` — for actual ID generation (production)
+    /// - For `Generated<Strategy>` provenance
+    pub fn for_test(id: ID) -> Self {
+        Self::from_canonical(id)
     }
 }
 
@@ -260,7 +503,7 @@ where
         value: <DB as sqlx::Database>::ValueRef<'q>,
     ) -> Result<Self, sqlx::error::BoxDynError> {
         let value = <ID as sqlx::Decode<DB>>::decode(value)?;
-        Ok(Self::for_labeled(value))
+        Ok(Self::from_canonical(value))
     }
 }
 

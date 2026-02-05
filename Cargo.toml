@@ -1,6 +1,6 @@
 [package]
 name = "tagid"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2024"
 authors = ["Damon Rolfs <drolfs@gmail.com>"]
 description = "Defines a newtype labeled tagging for different types of ids."
@@ -19,8 +19,9 @@ rust_2021_incompatible_closure_captures = "warn"
 rust_2021_prelude_collisions = "warn"
 
 [lints.clippy]
-cargo = "warn"
-suspicious = "warn"
+cargo = { level = "warn", priority = -1 }
+suspicious = { level = "warn", priority = -1 }
+multiple_crate_versions = "allow"
 
 [workspace]
 members = [".", "tagid-derive"]
@@ -44,7 +45,7 @@ uuid = { optional = true, version = "^1.13", features = ["serde", "v4",] }
 rs-snowflake = { optional = true, version = "^0.6" }
 ulid = { optional = true, version = "^1.2", features = ["serde",]}
 
-tagid-derive = { version = "1.0.0", optional = true }
+tagid-derive = { path = "tagid-derive", version = "1.1.0", optional = true }
 disintegrate = { version = "^2.0", optional = true }
 # disintegrate = { path =  "../../rust/disintegrate/disintegrate", optional = true }
 sqlx = {  version = "^0.8", features = ["postgres", "uuid"], optional = true }
