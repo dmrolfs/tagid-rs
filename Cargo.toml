@@ -1,6 +1,6 @@
 [package]
 name = "tagid"
-version = "1.1.0"
+version = "1.2.0"
 edition = "2024"
 authors = ["Damon Rolfs <drolfs@gmail.com>"]
 description = "Defines a newtype labeled tagging for different types of ids."
@@ -45,8 +45,8 @@ uuid = { optional = true, version = "^1.13", features = ["serde", "v4",] }
 rs-snowflake = { optional = true, version = "^0.6" }
 ulid = { optional = true, version = "^1.2", features = ["serde",]}
 
-tagid-derive = { path = "tagid-derive", version = "1.1.0", optional = true }
-disintegrate = { version = "^2.0", optional = true }
+tagid-derive = { path = "tagid-derive", version = "1.2.0", optional = true }
+disintegrate = { version = "^4.0", optional = true }
 # disintegrate = { path =  "../../rust/disintegrate/disintegrate", optional = true }
 sqlx = {  version = "^0.8", features = ["postgres", "uuid"], optional = true }
 frunk = { optional = true, version = "^0.4" }
@@ -57,8 +57,8 @@ pretty-type-name = "^1.0"
 rand = "^0.9"
 serde = { version = "^1.0", features = ["derive"] }
 smol_str = { version = "^0.3", default-features = true, features = ["serde"] }
-strum = "^0.27"
-strum_macros = "^0.27"
+strum = "^0.28"
+strum_macros = "^0.28"
 tailcall = "^1.0"
 thiserror = "^2.0"
 validator = { version = "^0.18", features = ["derive"] }
