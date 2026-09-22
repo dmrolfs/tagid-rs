@@ -37,6 +37,15 @@ beads.right.meta.json
 .sync.lock
 sync_base.jsonl
 
+# Dolt-backed embedded runtime (newer bd releases): local database state, lock/log files, and
+# backup snapshots -- all machine-local, regenerated on demand, never meant to be shared across
+# clones or packaged into a release artifact.
+.auto-import-issues.jsonl
+backup/
+dolt-server.lock
+dolt-server.log
+embeddeddolt/
+
 # NOTE: Do NOT add negation patterns (e.g., !issues.jsonl) here.
 # They would override fork protection in .git/info/exclude, allowing
 # contributors to accidentally commit upstream issue databases.
