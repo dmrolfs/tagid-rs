@@ -1,6 +1,6 @@
 [package]
 name = "tagid"
-version = "1.2.0"
+version = "1.2.1"
 edition = "2024"
 authors = ["Damon Rolfs <drolfs@gmail.com>"]
 description = "Defines a newtype labeled tagging for different types of ids."
