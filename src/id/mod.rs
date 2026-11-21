@@ -62,7 +62,7 @@ mod tests {
     #[cfg(feature = "ulid")]
     use crate::id::ulid::Ulid;
     use crate::{CustomLabeling, MakeLabeling, NoLabeling};
-    use assert_matches2::assert_let;
+    use strass::assert_let;
     use pretty_assertions::assert_eq;
     use serde_test::{Token, assert_tokens};
     use static_assertions::assert_impl_all;

@@ -515,7 +515,7 @@ where
 {
     fn encode_by_ref(
         &self,
-        buf: &mut <DB as sqlx::Database>::ArgumentBuffer<'q>,
+        buf: &mut <DB as sqlx::Database>::ArgumentBuffer,
     ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
         <ID as sqlx::Encode<DB>>::encode_by_ref(&self.id, buf)
     }

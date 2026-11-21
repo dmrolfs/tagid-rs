@@ -171,7 +171,7 @@ where
 {
     fn encode_by_ref(
         &self,
-        buf: &mut <DB as ::sqlx::Database>::ArgumentBuffer<'q>,
+        buf: &mut <DB as ::sqlx::Database>::ArgumentBuffer,
     ) -> Result<::sqlx::encode::IsNull, ::sqlx::error::BoxDynError> {
         // Route through `Ulid`'s own canonical base32 text (`Display`/`to_string`), matching
         // what `Type::type_info()` above now declares -- a `text`-shaped column storing the

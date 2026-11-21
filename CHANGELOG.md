@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-11-21
+
+### Changed
+
+- **Breaking:** upgrade the optional `sqlx` dependency from 0.8 to 0.9.
+  `Id`, `Ulid` and the other SQLx impls now implement the 0.9 `Encode`/`Decode`/`Type` traits, so a crate that enables the `sqlx` feature must use SQLx 0.9 too.
+  Types and behavior are unchanged: `Ulid` still encodes as text.
+  The only code change is the 0.9 `ArgumentBuffer` signature, which lost its lifetime.
+- The `disintegrate` feature is unaffected: `disintegrate` 4.x has no SQLx dependency. Only `disintegrate-postgres` pins SQLx, so a project using both must wait for a `disintegrate-postgres` release on SQLx 0.9.
+- Replace the deprecated `assert_matches2` dev-dependency with `strass`.
+
 ## [1.3.0] - 2026-11-21
 
 ### Changed
