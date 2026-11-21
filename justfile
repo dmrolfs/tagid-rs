@@ -13,7 +13,13 @@ clippy:
 
 # Validate documentation links
 doc-check:
-    cargo deadlinks --dir target/doc
+    #!/usr/bin/env bash
+    set -uo pipefail
+    cargo doc --all-features --no-deps
+    out=$(cargo deadlinks --dir target/doc 2>&1)
+    # shortcut: tolerates tracing's inlined `dispatcher` link and rustdoc's help/settings index.html (neither is tagid's); drop when rustdoc stops emitting them.
+    bad=$(grep "Linked file" <<<"$out" | grep -v -e "/dispatcher does not exist" -e "path index.html does not exist" || true)
+    if [ -n "$bad" ]; then echo "$out"; exit 1; fi
 
 # Build with all features and for all targets
 build:
@@ -23,8 +29,12 @@ build:
 test:
     cargo test --all-features --no-fail-fast
 
+# Check optional validation dependencies without starting services
+check-validator-features:
+    python3 scripts/check_validator_features.py
+
 # Run all checks (formatting, Clippy, doc links, build, and test)
-check: fmt clippy doc-check build test
+check: fmt check-validator-features clippy doc-check build test
 
 # Publish to crates.io (dry run by default)
 publish_dryrun:

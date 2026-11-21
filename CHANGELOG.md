@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-11-21
+
+### Changed
+
+- Upgrade validator from 0.18 to 0.21.
+  This removes the vulnerable IDNA 0.5 chain (RUSTSEC-2024-0421) and the unmaintained proc-macro-error 1 (RUSTSEC-2024-0370).
+  `MachineNode`'s `Validate` implementation and `ValidationErrors` return type now come from validator 0.21.
+  Snowflake users who name validator types directly must move to validator 0.21; the 0..=31 checks and error codes are unchanged.
+
+### Fixed
+
+- Make validator an optional dependency enabled only by `snowflake`.
+  Non-Snowflake consumers no longer compile it.
+- Clear strict clippy and documentation warnings so `just check` passes.
+
 ## [1.2.1] - 2026-09-22
 
 ### Fixed

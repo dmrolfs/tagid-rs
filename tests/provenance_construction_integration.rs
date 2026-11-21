@@ -113,7 +113,7 @@ fn test_multi_provenance_workflow() {
     assert_eq!(stripe_id.to_string(), "cus_123");
     assert_eq!(session_id.to_string(), "sess_abc");
 
-    let ids = vec![
+    let ids = [
         user_id.to_string(),
         stripe_id.to_string(),
         session_id.to_string(),

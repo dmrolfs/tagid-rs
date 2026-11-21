@@ -15,11 +15,11 @@
 //!
 //! ## Overview
 //!
-//! - [`Envelope`](Envelope): A wrapper that encapsulates an entity with metadata.
-//! - [`IntoEnvelope`](IntoEnvelope): A trait for converting entities into envelopes.
-//! - [`MetaData`](MetaData): Stores additional metadata associated with an entity.
-//! - [`Correlation`](Correlation): Defines a correlation ID for tracking related entities.
-//! - [`ReceivedAt`](ReceivedAt): Ensures an entity has a timestamp indicating when it was received.
+//! - [`Envelope`]: A wrapper that encapsulates an entity with metadata.
+//! - [`IntoEnvelope`]: A trait for converting entities into envelopes.
+//! - [`MetaData`]: Stores additional metadata associated with an entity.
+//! - [`Correlation`]: Defines a correlation ID for tracking related entities.
+//! - [`ReceivedAt`]: Ensures an entity has a timestamp indicating when it was received.
 
 #[allow(clippy::module_inception)]
 mod envelope;

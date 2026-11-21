@@ -8,7 +8,7 @@
 //!
 //! - [`LabelMode`] enum: Controls the level of detail (None, Short, Full)
 //! - [`Labeled`] struct: Wraps an `Id` with a specific presentation mode
-//! - [`.labeled(mode)`] method: Explicit opt-in for labeled presentation
+//! - `.labeled(mode)` method: Explicit opt-in for labeled presentation
 //!
 //! # Philosophy
 //!
